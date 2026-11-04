@@ -77,13 +77,15 @@
   <div class="kicker">How Vultr powers it</div>
   <h2>Vultr runs the brain. The phone is only his face.</h2>
   <div class="card" style="margin-top:34px; padding:18px 34px">
-    <table style="font-size:28px">
+    <table style="font-size:25px">
       <thead><tr><th style="width:23%">Vultr service</th><th style="width:44%">What it does here</th><th>Settings</th></tr></thead>
       <tbody>
-        <tr><td><b class="lap">Cloud Compute</b></td><td>The control plane: runs the web app and orchestrator, decides what runs, with which limits, and proves each container was destroyed.</td><td class="mono" style="font-size:25px">vc2-2c-4gb, Madrid, Docker on Ubuntu 24.04, $20/month</td></tr>
-        <tr><td><b class="lap">Serverless Inference</b></td><td>Every LLM call: the literal compiler that turns a child&rsquo;s words into code.</td><td class="mono" style="font-size:25px">qwen3.8-27b, temp 0, JSON output, about 1&ndash;2 s a call; glm-5.3 fallback</td></tr>
-        <tr><td><b class="lap">Serverless Inference (TTS)</b></td><td>Backup voice if ElevenLabs is down.</td><td class="mono" style="font-size:25px">auk-flash</td></tr>
-        <tr><td><b class="lap">Firewall</b></td><td>Only the ports a web app needs.</td><td class="mono" style="font-size:25px">22, 80, 443 (ufw)</td></tr>
+        <tr><td><b class="lap">Cloud Compute</b></td><td>The control plane: runs the web app and orchestrator, decides what runs, with which limits, and proves each container was destroyed.</td><td class="mono" style="font-size:22px">vc2-2c-4gb, Madrid, Docker + gVisor (runsc), $20/month</td></tr>
+        <tr><td><b class="lap">Serverless Inference</b></td><td>The literal compiler: a child&rsquo;s words become code.</td><td class="mono" style="font-size:22px">qwen3.8-27b, temp 0, JSON, about 1&ndash;2 s</td></tr>
+        <tr><td><b class="lap">Serverless Inference</b></td><td>Thoth, the teacher: checks the code against her words, hints when she&rsquo;s stuck.</td><td class="mono" style="font-size:22px">glm-5.3, two checks in parallel</td></tr>
+        <tr><td><b class="lap">Serverless Inference</b></td><td>Hears the child, and screens every sentence before the compiler sees it.</td><td class="mono" style="font-size:22px">nemotron omni &middot; nemotron content safety</td></tr>
+        <tr><td><b class="lap">Serverless Inference (TTS)</b></td><td>Backup voice if ElevenLabs is down.</td><td class="mono" style="font-size:22px">auk-flash</td></tr>
+        <tr><td><b class="lap">Firewall</b></td><td>Only the ports a web app needs.</td><td class="mono" style="font-size:22px">22, 80, 443 (ufw)</td></tr>
       </tbody>
     </table>
   </div>
@@ -112,13 +114,13 @@
         <tr><td>Connect to 1.1.1.1:80</td><td class="r teal">Network is unreachable (Errno 101)</td></tr>
         <tr><td>Write to /runner.py</td><td class="r teal">PermissionError: read-only disk</td></tr>
         <tr><td>Look for API keys</td><td class="r teal">None in the environment</td></tr>
-        <tr><td>Fork bomb</td><td class="r teal">Stopped at 30 processes (limit 32)</td></tr>
+        <tr><td>Fork bomb</td><td class="r teal">Box stopped after about 5 processes (gVisor, limit 64)</td></tr>
       </tbody></table>
     </div>
   </div>
   <p style="margin-top:34px; font-size:28px"><b>Four kill layers:</b> <span class="muted">timeout inside the container (3 s) &middot; host timer docker kill (3.5 s) &middot; a sweeper for any box older than 10 s &middot; stripped builtins.</span></p>
   <p class="muted" style="margin-top:14px; font-size:26px">Every run writes a downloadable JSON receipt: container ID, limits, time, exit code, OOM flag, removal verified.</p>
-  <div class="foot"><span>Honest limit: Docker&rsquo;s default runtime (runc), not gVisor or a microVM.</span><span>Teach Ahmes</span></div>
+  <div class="foot"><span>Every box runs under gVisor (runsc), its own user-space kernel. Honest limit: not a microVM.</span><span>Teach Ahmes</span></div>
 </section>
 
 <!-- 6 RESULTS -->
@@ -138,7 +140,7 @@
     <div style="display:flex; flex-direction:column; gap:22px">
       <div class="card" style="padding:22px 30px">
         <h3 class="gold" style="color:#B07F0C">Honest limits</h3>
-        <ul style="font-size:24px; margin-top:8px; line-height:1.35"><li>Prototype. Learning outcomes for children are untested.</li><li>runc, not gVisor. The guard is a first layer; the container is the boundary.</li><li>Inference runs in the US: typed text and synthetic voices only.</li></ul>
+        <ul style="font-size:24px; margin-top:8px; line-height:1.35"><li>Prototype. Learning outcomes for children are untested.</li><li>gVisor, not a microVM. The guard is a first layer; the gVisor container is the boundary.</li><li>Inference runs in the US: typed text and synthetic voices only.</li></ul>
       </div>
       <div class="card" style="padding:22px 30px; border-color:var(--lapis)">
         <h3 class="lap">What&rsquo;s next</h3>

@@ -1,0 +1,74 @@
+{
+ "n1": [
+  "narr",
+  "Ahmes is a robot classmate who's sure he's great at maths. A child has to teach him."
+ ],
+ "c1": [
+  "child",
+  "Look at the tenths first."
+ ],
+ "n2": [
+  "narr",
+  "Her words become his code on Vultr. One model writes it, a throwaway gVisor box runs it, and plain arithmetic checks it."
+ ],
+ "n3": [
+  "narr",
+  "Twenty-four out of forty. A quiz on new problems shows exactly what she didn't say."
+ ],
+ "c3": [
+  "child",
+  "Keep doubling both bottoms until they're the same."
+ ],
+ "n4": [
+  "narr",
+  "This rule never ends. At three seconds the sandbox kills it and deletes the box. Ahmes keeps his last working rule."
+ ],
+ "n5": [
+  "narr",
+  "Each turn is a few calls to open models on Vultr Serverless Inference, and one throwaway container, listed here with timings."
+ ],
+ "n6": [
+  "narr",
+  "Now try to break him. Out of memory: killed at sixty-four megabytes. The internet: unreachable. Every box leaves a receipt."
+ ],
+ "n7": [
+  "narr",
+  "When she's stuck, Thoth steps in: a second open model on Vultr that checks the code against her words, and hints without giving the answer."
+ ],
+ "thoth": [
+  "thoth",
+  "Look at the hundredths place: does 6 or 4 come next? Which number line spot matches that?"
+ ],
+ "c_ans": [
+  "child",
+  "The answer is 0.61."
+ ],
+ "n8": [
+  "narr",
+  "An answer isn't a rule, so Ahmes asks for one."
+ ],
+ "c4": [
+  "child",
+  "If the tenths are the same, check the next place, and if every place is the same, they're equal."
+ ],
+ "n9": [
+  "narr",
+  "Forty out of forty, on brand-new problems."
+ ],
+ "n10": [
+  "narr",
+  "Six lessons from the Year 5 and 6 curriculum for England, each starting from a real childhood mistake."
+ ],
+ "n11": [
+  "narr",
+  "For parents and teachers, a report of the rule she actually explained, in her own words."
+ ],
+ "n12": [
+  "narr",
+  "Teach Ahmes. Built on Vultr for Agent Rush."
+ ],
+ "n_arch": [
+  "narr",
+  "Four open models on Vultr Serverless Inference, and one Vultr server, where every task gets its own gVisor box, destroyed afterwards."
+ ]
+}

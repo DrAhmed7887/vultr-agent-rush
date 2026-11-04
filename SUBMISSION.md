@@ -33,7 +33,7 @@ A second open model, Thoth the teacher (GLM-5.3 on Vultr), watches every lesson:
 **Links:**
 - Demo: https://64-177-33-215.sslip.io
 - Repo: https://github.com/DrAhmed7887/vultr-agent-rush (currently PRIVATE; make it public before submitting)
-- Video: video/out/teach-ahmes-demo.mp4 (upload where you choose, for example YouTube unlisted)
+- Video: video/out/teach-ahmes-demo.mp4, 2:21, recorded from the live site on 4 Nov (upload where you choose, for example YouTube unlisted)
 - Slides: video/out/slides.pdf · Cover: video/out/cover.png
 
 **Before submitting (Ahmed):**

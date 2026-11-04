@@ -1,0 +1,17 @@
+# Teach Ahmes demo, v2 storyboard (target about 2:45, hard cap 3:00)
+
+Audience: lablab.ai / Vultr "Agent Rush" judges, Challenge 1 "Blast Radius Zero" (run untrusted AI-generated code safely). Judged on Application of Technology (Vultr depth), Presentation, Business Value, Originality.
+Everything on screen is the live site, recorded at 1920×1080, with captions. Voices: a narrator (ElevenLabs), a child (ElevenLabs, typed on screen as she speaks), and Ahmes (his real in-app voice).
+
+| # | Time | Picture (live site) | Sound | Point |
+|---|---|---|---|---|
+| 1 | 0:00–0:10 | Lesson map, then decimals: homework "0.45 or 0.5", 0.45 circled in red. Child taps ✗ "He's wrong". The number line shows 0.5 further along. | Ahmes: "0.45! 45 is more than 5, so it's bigger." Narr: "Ahmes is a robot classmate who's sure he's great at maths. A child has to teach him." | Hook: the mistake, and the child as teacher, in 10 s |
+| 2 | 0:10–0:30 | Teach screen; the child's words appear; the thinking steps tick (safety, code, safe box, Thoth); the retry shows 0.5 circled ✓; a cartouche turns gold. | Child: "Look at the tenths first." Narr: "Her words become his code on Vultr: one model writes it, a throwaway gVisor box runs it, plain arithmetic checks it." Ahmes's retry line. | The core loop and Vultr in one breath |
+| 3 | 0:30–0:42 | Quiz: four cards flip; one red; "This one tricked him: 0.61 vs 0.606". | Ahmes: his reason. Narr: "A quiz on new problems shows exactly what she didn't say." | Real feedback, not a score |
+| 4 | 0:42–1:05 | New homework; the child tries a vague rule twice; Thoth's card appears with a hint; then the full rule; the retry ✓; quiz all green; the "Teacher of Ahmes" seal. | Child lines; Thoth's hint read by the narrator? (no: shown as text and read by the narrator); Ahmes: "I got every one right!" Narr: "Thoth, a second open model on Vultr, watches the lesson. He gives hints, never answers." | The teacher agent; a win |
+| 5 | 1:05–1:22 | Fractions: "Keep doubling both bottoms until they're the same." Ahmes dizzy, spiral eyes, stamp "Stopped by the sandbox 3.2 s". | Ahmes: dizzy line. Narr: "Some rules never end. The gVisor box on a Vultr server stops him at three seconds and is destroyed. He keeps his old brain." | Blast Radius Zero, as a fun robot moment |
+| 6 | 1:22–1:35 | Lesson map, then quick flashes: place-value chart, order-of-operations steps, temperature number line. | Narr: "Six lessons from the Year 5 and 6 curriculum for England, each starting from a real childhood mistake." | Breadth and business value |
+| 7 | 1:35–2:00 | How it works: "This turn on Vultr" list (five steps with times); break-him chip → out of memory; beyond the guard → network unreachable; receipt facts (runtime runsc). | Narr: "Every lesson is five Vultr AI calls and one throwaway container. Try to break him: out of memory, killed. The internet: unreachable. Every box leaves a receipt." | Evidence for the judges |
+| 8 | 2:00–2:25 | Architecture diagram builds in steps. | Narr over the steps (omni, safety, Qwen compiler, GLM teacher, gVisor sandbox, sweeper). | How Vultr is used |
+| 9 | 2:25–2:40 | Report page (child's words, what happened, Thoth's hint); the certificate. | Narr: "For parents and teachers: the rule a child actually explained, in her own words." | Business value |
+| 10 | 2:40–2:50 | End card: BUGGY quote, then the URL. | Narr: "In 1978, computers diagnosed children's maths bugs. Now children debug the computer. Teach Ahmes, built on Vultr." | Close |
