@@ -17,11 +17,9 @@
 <body>
 <header class="top">
   <p class="wordmark"><span class="cartouche-word">Teach Ahmes</span></p>
-  <div class="skills" role="tablist" aria-label="What Ahmes is learning">
-    <button class="skill" role="tab" data-skill="compare_decimals" aria-selected="true">Decimals</button>
-    <button class="skill" role="tab" data-skill="add_fractions" aria-selected="false">Fractions</button>
-  </div>
+  <button class="lesson-btn" id="lessons-btn" type="button"><span aria-hidden="true">☰</span> <span id="lesson-name">Lessons</span></button>
   <div class="top-tools">
+    <button class="link" id="report-btn" type="button">Report</button>
     <button class="link" id="sound" type="button" aria-pressed="true">Voice on</button>
     <button class="link" id="how-btn" type="button" aria-expanded="false" aria-controls="how">How it works</button>
   </div>
@@ -81,7 +79,13 @@
       <li data-step="check">Check</li><li data-step="teach">Teach</li><li data-step="retry">Try again</li><li data-step="quiz">Quiz</li>
     </ol>
 
-    <div class="screen" id="s-check">
+    <div class="screen" id="s-map">
+      <h1 class="ask" id="map-title">Getting Ahmes ready…</h1>
+      <p class="sub">Each lesson is a Year 5 or Year 6 maths topic. Ahmes starts with a classic mistake.</p>
+      <ol class="lessons" id="lessons"></ol>
+    </div>
+
+    <div class="screen" id="s-check" hidden>
       <h1 class="ask">Ahmes did his homework. Is he right?</h1>
       <div class="problem" id="check-problem"></div>
       <div class="marks">
@@ -163,12 +167,24 @@
       <h1 class="ask" id="win-title">You taught Ahmes every trick!</h1>
       <p class="sub" id="win-sub"></p>
       <div class="row">
-        <button class="big" id="win-next" type="button">Teach him fractions</button>
+        <button class="big" id="win-next" type="button">Pick another lesson</button>
+        <button class="quiet" id="win-cert" type="button">Save the certificate</button>
         <button class="quiet" id="win-reset" type="button">Start him over</button>
       </div>
     </div>
   </section>
 </main>
+
+<section class="report" id="report" hidden aria-label="Lesson report">
+  <div class="how-in">
+    <div class="how-head">
+      <h2 class="h2">Lesson report</h2>
+      <p class="hint">For a parent or teacher: the rules your child explained in their own words, what Ahmes learned, and when Thoth, the teacher, stepped in. It lives only in this browser's session and is gone after 24 hours.</p>
+      <div class="row-inline"><button class="quiet" id="report-print" type="button">Print it</button><button class="quiet" id="report-close" type="button">Back to Ahmes</button></div>
+    </div>
+    <div id="report-body"></div>
+  </div>
+</section>
 
 <section class="how" id="how" hidden aria-label="How it works">
   <div class="how-in">

@@ -12,6 +12,21 @@ Ahmes is a robot classmate who is sure he's great at maths. He isn't. A child ex
 
 > He's named after Ahmes, the Egyptian scribe who copied the Rhind Papyrus around 1550 BC, a famous early maths text full of fractions. 3,500 years later, his robot descendant still gets them wrong.
 
+## Six lessons, from the Year 5 and Year 6 curriculum
+
+The child picks a lesson from a map. Each one is a statutory topic in the [National Curriculum for England](https://www.gov.uk/government/publications/national-curriculum-in-england-mathematics-programmes-of-study/national-curriculum-in-england-mathematics-programmes-of-study), and Ahmes starts with a documented wrong rule (see [`docs/YEAR6.md`](docs/YEAR6.md)):
+
+| Lesson | Year | Ahmes starts out thinking | Tricks to learn |
+|---|---|---|---|
+| Which decimal is bigger? | 5 | the longer number is bigger (0.45 > 0.5) | 4 |
+| Adding fractions | 6 | add the tops and add the bottoms (1/2 + 1/3 = 2/5) | 3 |
+| Times 10, 100 and 1,000 | 6 | just add a zero (0.45 × 10 = 0.450) | 4 |
+| Which fraction is bigger? | 6 | the bigger bottom wins (1/8 > 1/4) | 4 |
+| Which sum comes first? | 6 | always left to right (2 + 3 × 4 = 20) | 4 |
+| Below zero | 6 | ignore the minus signs (−4 °C to 7 °C is 3 degrees) | 4 |
+
+Progress is remembered for 24 hours in the server's memory, so a reload picks up where the child left off. A finished lesson earns a "Teacher of Ahmes" certificate (drawn in the browser, no name asked for). The **Report** gives a parent or teacher the rules the child explained in their own words, what Ahmes learned, and every time Thoth stepped in.
+
 ## What the child does, one step at a time
 
 1. **Check his homework.** Ahmes answers one problem wrong and says why, in his own words ("0.45! 45 is more than 5"). The child marks it ✓ or ✗ like a teacher.
@@ -33,10 +48,10 @@ His reasons are never made up by an AI: for each wrong answer the app finds whic
    - *"1/2 + 1/3 = 2/5"* (Stafylidou & Vosniadou; Lortie-Forgues, Tian & Siegler).
 2. **The child explains the rule** in their own words.
 3. **The literal compiler** (on Vultr Serverless Inference) rewrites Ahmes's `solve()` function. It is told to implement only what the child said, and to tie each step to an exact quote. Mechanical checks then reject patches that add unexplained maths. This constrains it, but can't guarantee it understood the child's meaning.
-4. **His new code runs in a brand-new container** on a Vultr VM. That container has:
+4. **His new code runs in a brand-new gVisor container** on a Vultr VM. gVisor (`runsc`) gives each box its own user-space kernel, so the code never talks to the VM's real kernel directly. The container has:
    - no network;
    - no secrets;
-   - 64 MB of memory, half a CPU and 32 processes;
+   - 64 MB of memory, half a CPU and a 64-process limit;
    - a read-only disk;
    - a 3-second limit.
 
@@ -54,6 +69,8 @@ The sentence decides what he does:
 | "Multiply the bottoms together, multiply each top by the other bottom, then add the tops." | The correct rule | **40/40** |
 | "Keep doubling both bottoms until they're the same." | `while b1 != b2: b1*=2; b2*=2`, which never makes unequal bottoms equal | **Stopped by the sandbox at 3 s** |
 | "The answer is 5/6." | No rule given, so he asks for one | — |
+
+The four Year 6 lessons have their own gate ([`spike/spike_y6.py`](spike/spike_y6.py), 14 sentences: full rules, partial rules, vague words, an answer with no rule). Across two runs, 31 of 34 sentence runs behaved as expected; the misses were run-to-run variation on good sentences (one scored 20/40 once, one was rejected once), not wrong cures. For example "Make the bottoms the same by multiplying, then the bigger top wins" honestly gives 17/40, because it never says to change the tops.
 
 These are measured results on 13 curated sentences and fixed 40-problem sets; the live demo uses the same decimal and fraction tests (seed 11), so the scores reproduce there. See [`spike/results-qwen3.8-27b.json`](spike/results-qwen3.8-27b.json): on the latest run (4 Nov), 12 of the 13 behaved as expected. The miss: *"Add a zero to the shorter one"* was compiled as "pad the shorter one to the same length", a generous reading that cures him. The quote check tests form, not meaning, so it let that through. That shows the mechanism works; it doesn't show general correctness, or that children learn.
 
@@ -76,7 +93,7 @@ flowchart LR
 
 | Vultr service | What it does here | Settings |
 |---|---|---|
-| **Cloud Compute** | The control plane. It runs the web app and orchestrator, decides what runs, where, with which limits and for how long, and proves each container was destroyed. | `vc2-2c-4gb`, Madrid, Docker on Ubuntu 24.04, $20/month |
+| **Cloud Compute** | The control plane. It runs the web app and orchestrator, decides what runs, where, with which limits and for how long, and proves each container was destroyed. | `vc2-2c-4gb`, Madrid, Docker with gVisor (`runsc`) on Ubuntu 24.04, $20/month |
 | **Serverless Inference** | Every LLM call: the literal compiler that turns a child's words into code. | `qwen3.8-27b` at temperature 0, JSON output, about 1–2 s per call; `glm-5.3` if the main model's call fails |
 | **Serverless Inference (teacher)** | Thoth: checks every new brain against the child's words, and coaches a stuck child | `glm-5.3`, two checks in parallel with the sandbox, about 1.5–3 s |
 | **Serverless Inference (omni)** | Hears the child: a short recording becomes text. Told the child is explaining maths, it wrote "tenths" where Whisper and Qwen ASR heard "temps" and "tents" | `nemotron-3-nano-omni-30b-a3b-reasoning`, about 3 s |
@@ -127,13 +144,13 @@ There is also a 0.25 s timer per test case. Results stream out one line at a tim
 | Connect to 1.1.1.1:80 | `OSError: [Errno 101] Network is unreachable` |
 | Write to `/runner.py` | `PermissionError`. The root filesystem is configured read-only (`ReadonlyRootfs: true` in the receipt) and the process runs as `nobody` |
 | Look for API keys | none in the container's environment; the host's `/etc/ahmes.env` is not mounted |
-| Fork bomb | stopped after 30 processes (`--pids-limit 32`) |
+| Fork bomb | the box is stopped after about 5 processes (gVisor, `--pids-limit 64`; gVisor's own threads count toward the limit) and removed |
 
 Every run writes a downloadable JSON receipt: container ID, the limits Docker reports it applied, elapsed time, exit code, OOM flag, and confirmed removal. Receipts record the configured restrictions and the observed clean-up; they don't prove the box can't be escaped.
 
 **Honest limits:**
-- The sandbox uses Docker's default runtime (runc), not gVisor or a microVM. Vultr's own sandboxing guide uses **Microsandbox** on VX1 plans with KVM, which is the stronger next step.
-- The orchestrator's account has Docker access, which is root-equivalent on the VM, and containers share the host kernel. That's why no user input reaches the Docker arguments.
+- The sandbox runs under gVisor, a user-space kernel, not a full microVM. Vultr's own sandboxing guide uses **Microsandbox** on VX1 plans with KVM, which would be the next step. `AHMES_SANDBOX_RUNTIME=runc` switches back to plain Docker; under runc the limit is 32 processes.
+- The orchestrator's account has Docker access, which is root-equivalent on the VM. That's why no user input reaches the Docker arguments.
 - The in-process guard is a first layer only. The container is the real boundary.
 - Typed explanations are sent to Vultr Serverless Inference, which runs in the US. We haven't verified the provider's retention, so the demo uses no real children's data, only typed text and synthetic voices.
 
@@ -141,8 +158,8 @@ Every run writes a downloadable JSON receipt: container ID, the limits Docker re
 
 | Concern | What we do | What's left |
 |---|---|---|
-| A child's code loops, eats memory, or forks | Per-container memory, CPU and process limits; 3 s timeout; host kill; sweeper | A shared kernel; no gVisor or microVM yet |
-| Code tries to reach out or read secrets | No network; no env secrets or mounts; read-only root; non-root user; guard plus stripped builtins | A container escape would need a kernel bug |
+| A child's code loops, eats memory, or forks | Per-container memory, CPU and process limits; 3 s timeout; host kill; sweeper | One small VM |
+| Code tries to reach out or read secrets | gVisor user-space kernel; no network; no env secrets or mounts; read-only root; non-root user; guard plus stripped builtins | An escape would need a gVisor bug and then a kernel bug; no microVM yet |
 | Too many requests | At most 2 sandboxes at once on the VM; per-IP limits; a global cap of 120 teach turns a minute; 500-character sentences; 64 KB request body; a daily cap on new voice lines | One small VM, so a determined flood would slow it |
 | Words smuggle in a full fix | Quote check, per-step operation cap, unexplained-maths rejection | It checks form, not meaning |
 
@@ -166,7 +183,7 @@ An LLM asked to "fix" fractions will quietly write the right answer whatever the
 ## Run it
 
 ```bash
-uv sync && uv run pytest -q          # 12 tests: guard, classifier, quote check, grading, trap choice, tricks, Thoth
+uv sync && uv run pytest -q          # 15 tests: guard, classifier, quote check, grading, trap choice, tricks, Thoth, Year 6 skills
 deploy/deploy.sh                     # rsync to the Vultr VM, build the sandbox image, restart
 ```
 
@@ -196,10 +213,10 @@ This is a learning-by-teaching prototype. **Learning outcomes for children are u
 ## Repo map
 
 ```
-app/        main.py (API) · compiler.py · teacher.py · guard.py · sandbox.py · skills.py · classifier.py · replies.py · voice.py · listen.py · fixtures.py
+app/        main.py (API) · compiler.py · teacher.py · guard.py · sandbox.py · skills.py · skills_y6.py · classifier.py · replies.py · voice.py · listen.py · fixtures.py
 sandbox/    Dockerfile · runner.py        (what runs inside the throwaway container)
 web/        index.html · app.js (the child's steps) · visuals.js (number line, fraction bars) · how.js (grown-ups view) · style.css · kid.css
-spike/      spike.py + results            (gate G1)
+spike/      spike.py, spike_y6.py + results (gate G1 for all six lessons)
 deploy/     ahmes.service · Caddyfile · deploy.sh
 docs/       SPEC.md                       (the design, reviewed by GPT-6 Astra, Claude Opus and Gemini 4)
 ```

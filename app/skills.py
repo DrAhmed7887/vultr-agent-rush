@@ -199,6 +199,8 @@ def valid_problem(skill: str, a: Sequence[int]) -> bool:
     """A problem the child's screen sends back must be small, well-formed integers."""
     if not all(isinstance(x, int) and not isinstance(x, bool) for x in a):
         return False
+    if skill in VALID:
+        return bool(VALID[skill](tuple(a)))
     if skill == "compare_decimals":
         if len(a) != 6:
             return False
@@ -218,3 +220,32 @@ def tricks(skill: str, probs: Sequence[Sequence[int]], oks: Sequence[bool]) -> l
         out.append({"key": key, "name": name, "example": example, "right": right, "total": len(idx),
                     "learned": bool(idx) and right == len(idx)})
     return out
+
+
+# ---------- what the child's screen and the compiler need to know about each skill ----------
+
+VIEW = {"compare_decimals": "dec_compare", "add_fractions": "frac_add"}
+YEAR = {"compare_decimals": 5, "add_fractions": 6}
+IDEAS = {
+    "compare_decimals": ["Look at the tenths first.",
+                         "If the tenths are the same, check the next place, and if every place is the same, they're equal.",
+                         "The longer number is bigger because it has more digits."],
+    "add_fractions": ["Make the bottoms the same by multiplying, then add the tops.",
+                      "Multiply the bottoms together, multiply each top by the other bottom, then add the tops.",
+                      "Keep doubling both bottoms until they're the same."],
+}
+BRIEF: dict[str, str] = {}          # extra input-format notes for the compiler (the first two skills are in its prompt)
+VALID: dict[str, Callable] = {}
+
+from .skills_y6 import Y6  # noqa: E402  (registers the Year 6 skills)
+
+for _k, _v in Y6.items():
+    SKILLS[_k] = _v["skill"]
+    KIND[_k] = _v["kind"]
+    TRICKS[_k] = _v["tricks"]
+    HOMEWORK[_k] = _v["homework"]
+    VIEW[_k] = _v["view"]
+    YEAR[_k] = _v["year"]
+    IDEAS[_k] = _v["ideas"]
+    BRIEF[_k] = _v["brief"]
+    VALID[_k] = _v["valid"]

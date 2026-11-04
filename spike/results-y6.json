@@ -1,0 +1,128 @@
+[
+ {
+  "skill": "times_tens",
+  "sentence": "Move every digit one place to the left for each zero.",
+  "expect": "pass",
+  "result": "OK",
+  "right": 40,
+  "as_expected": true,
+  "code": "def solve(digits, places, zeros):\n    return (digits, places - zeros)\n"
+ },
+ {
+  "skill": "times_tens",
+  "sentence": "Move the decimal point one place to the right for each zero, and fill empty places with zeros.",
+  "expect": "pass",
+  "result": "OK",
+  "right": 40,
+  "as_expected": true,
+  "code": "def solve(digits, places, zeros):\n    places = places - zeros\n    if places < 0:\n        digits = pad(digits, places + zeros, zeros)\n        places = 0\n    return (digits, places)\n"
+ },
+ {
+  "skill": "times_tens",
+  "sentence": "Just add zeros on the end.",
+  "expect": "fail",
+  "result": "OK",
+  "right": 40,
+  "as_expected": false,
+  "code": "def solve(digits, places, zeros):\n    result = digits\n    for i in range(zeros):\n        result = result * 10\n    return (result, places)\n"
+ },
+ {
+  "skill": "times_tens",
+  "sentence": "The answer is 4.5.",
+  "expect": "no_rule",
+  "result": "NO_RULE",
+  "right": null,
+  "as_expected": true,
+  "code": ""
+ },
+ {
+  "skill": "compare_fractions",
+  "sentence": "Multiply each top by the other fraction's bottom, then the bigger answer wins.",
+  "expect": "pass",
+  "result": "OK",
+  "right": 40,
+  "as_expected": true,
+  "code": "def solve(top1, bottom1, top2, bottom2):\n    a = top1 * bottom2\n    b = top2 * bottom1\n    if a > b:\n        return 1\n    if b > a:\n        return 2\n    return 0\n"
+ },
+ {
+  "skill": "compare_fractions",
+  "sentence": "Make the bottoms the same by multiplying, then the bigger top wins.",
+  "expect": "partial",
+  "result": "OK",
+  "right": 17,
+  "as_expected": true,
+  "code": "def solve(top1, bottom1, top2, bottom2):\n    bottom = bottom1 * bottom2\n    if top1 > top2:\n        return 1\n    if top2 > top1:\n        return 2\n    return 0\n"
+ },
+ {
+  "skill": "compare_fractions",
+  "sentence": "When the tops are the same, the smaller bottom wins.",
+  "expect": "partial",
+  "result": "OK",
+  "right": 22,
+  "as_expected": true,
+  "code": "def solve(top1, bottom1, top2, bottom2):\n    if top1 == top2:\n        if bottom1 < bottom2:\n            return 1\n        if bottom2 < bottom1:\n            return 2\n    if bottom1 > bottom2:\n        return 1\n    if bottom2 > bottom1:\n        return 2\n    if top1 > top2:\n        return 1\n    if top2 > top1:\n        return 2\n    return 0\n"
+ },
+ {
+  "skill": "compare_fractions",
+  "sentence": "The bigger bottom wins because it's a bigger number.",
+  "expect": "fail",
+  "result": "OK",
+  "right": 12,
+  "as_expected": true,
+  "code": "def solve(top1, bottom1, top2, bottom2):\n    if bottom1 > bottom2:\n        return 1\n    if bottom2 > bottom1:\n        return 2\n    if top1 > top2:\n        return 1\n    if top2 > top1:\n        return 2\n    return 0\n"
+ },
+ {
+  "skill": "order_of_operations",
+  "sentence": "Do brackets first, then times and divide, then plus and take away.",
+  "expect": "pass",
+  "result": "OK",
+  "right": 40,
+  "as_expected": true,
+  "code": "def solve(a, op1, b, op2, c, brackets):\n    if brackets == 2:\n        first = apply(op2, b, c)\n        return apply(op1, a, first)\n    if brackets == 1:\n        first = apply(op1, a, b)\n        return apply(op2, first, c)\n    if op1 == 3 or op1 == 4:\n        first = apply(op1, a, b)\n        return apply(op2, first, c)\n    if op2 == 3 or op2 == 4:\n        first = apply(op2, b, c)\n        return apply(op1, a, first)\n    first = apply(op1, a, b)\n    return apply(op2, first, c)\n"
+ },
+ {
+  "skill": "order_of_operations",
+  "sentence": "Do times and divide before plus and take away.",
+  "expect": "partial",
+  "result": "OK",
+  "right": 30,
+  "as_expected": true,
+  "code": "def solve(a, op1, b, op2, c, brackets):\n    if op1 == 3 or op1 == 4:\n        first = apply(op1, a, b)\n        return apply(op2, first, c)\n    if op2 == 3 or op2 == 4:\n        first = apply(op2, b, c)\n        return apply(op1, a, first)\n    first = apply(op1, a, b)\n    return apply(op2, first, c)\n"
+ },
+ {
+  "skill": "order_of_operations",
+  "sentence": "Be careful about the order.",
+  "expect": "fail",
+  "result": "NO_RULE",
+  "right": null,
+  "as_expected": true,
+  "code": ""
+ },
+ {
+  "skill": "intervals",
+  "sentence": "Count up from the first number to the second number, going through zero.",
+  "expect": "pass",
+  "result": "OK",
+  "right": 40,
+  "as_expected": true,
+  "code": "def solve(start, end):\n    return end - start\n"
+ },
+ {
+  "skill": "intervals",
+  "sentence": "Add the two numbers without the minus signs.",
+  "expect": "partial",
+  "result": "OK",
+  "right": 21,
+  "as_expected": true,
+  "code": "def solve(start, end):\n    a = abs(start)\n    b = abs(end)\n    return a + b\n"
+ },
+ {
+  "skill": "intervals",
+  "sentence": "Count carefully.",
+  "expect": "fail",
+  "result": "NO_RULE",
+  "right": null,
+  "as_expected": true,
+  "code": ""
+ }
+]

@@ -76,9 +76,18 @@ FRAC_HYPOTHESES: dict[str, tuple[str, Callable[[Sequence[int]], object]]] = {
 }
 
 HYPOTHESES = {"compare_decimals": DEC_HYPOTHESES, "add_fractions": FRAC_HYPOTHESES}
+NORM: dict = {}
+
+from .skills_y6 import Y6  # noqa: E402
+
+for _k, _v in Y6.items():
+    HYPOTHESES[_k] = _v["hyp"]
+    NORM[_k] = _v["norm"]
 
 
 def _norm(skill: str, out: object) -> object:
+    if skill in NORM:
+        return NORM[skill](out)
     if skill == "add_fractions":
         if isinstance(out, (list, tuple)) and len(out) == 2 and all(isinstance(x, int) for x in out) and out[1]:
             return Fraction(out[0], out[1])
@@ -103,6 +112,8 @@ def classify(skill: str, probes: Sequence[Sequence[int]], outputs: Sequence[obje
 
 
 def _norm_truth(skill: str, v: object) -> object:
+    if skill in NORM:
+        return v
     if skill == "add_fractions":
         return v if isinstance(v, Fraction) else None
     return v

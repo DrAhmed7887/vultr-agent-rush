@@ -161,6 +161,55 @@
 }
 @keyframes slam2 { from { transform: rotate(-8deg) scale(1.6); opacity: 0; } }
 
+/* lesson map */
+.lesson-btn { font: 700 16px var(--body); color: var(--on-lapis); background: var(--lapis); border: 2px solid var(--lapis);
+  border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+.lessons { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+.lesson { width: 100%; text-align: left; display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; padding: 14px 16px;
+  border-radius: 18px; border: 2px solid var(--line); background: var(--paper); cursor: pointer; font: inherit; color: var(--ink); min-height: 96px; }
+.lesson:hover { border-color: var(--lapis); }
+.lesson.won { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 14%, var(--card)); }
+.l-title { font-weight: 700; font-size: 18px; line-height: 1.2; }
+.l-year { font-size: 13px; font-weight: 600; color: var(--faience); white-space: nowrap; }
+.l-dots { display: flex; gap: 6px; align-items: center; }
+.l-dots .dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); }
+.l-dots .dot.on { background: var(--gold); border-color: var(--gold); }
+.l-status { font-size: 13px; color: var(--muted); justify-self: end; align-self: center; }
+.tricks[hidden], .path[hidden] { display: none; }
+
+/* place-value chart, order of operations, temperatures */
+.pv { border-collapse: collapse; margin: 0 auto; font-variant-numeric: tabular-nums; }
+.pv th { font-size: 14px; font-weight: 600; color: var(--muted); padding: 2px 4px; max-width: 64px; line-height: 1.1; vertical-align: bottom; }
+.pv td { font-size: clamp(22px, 4vw, 30px); font-weight: 800; text-align: center; width: 1.3em; padding: 2px 2px;
+  border-bottom: 2px solid var(--line); border-right: 1px dashed var(--line); }
+.pv td.dot, .pv th.dot { width: .5em; border-right: 0; }
+.pv .pv-label { font-size: 13px; text-align: right; padding-right: 8px; white-space: nowrap; }
+.pv-his td, .pv-his .pv-label { color: var(--wrong); }
+.pv-true td, .pv-true .pv-label { color: var(--faience); }
+.ops-nums { font-size: clamp(32px, 6.5vw, 46px); }
+.ops-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.ops-col { border-radius: 14px; padding: 10px 14px; border: 2px solid var(--line); background: var(--card); }
+.ops-col ol { margin: 0; padding-left: 22px; font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.ops-title { margin: 0 0 4px; font-size: 14px; font-weight: 700; }
+.ops-his { border-color: var(--wrong); } .ops-his .ops-title, .ops-his li { color: var(--wrong); }
+.ops-true { border-color: var(--faience); } .ops-true .ops-title { color: var(--faience); }
+.t-arc { fill: none; stroke: var(--faience); stroke-width: 3; stroke-linecap: round; }
+
+/* report */
+.report { border-top: 2px solid var(--line); background: var(--paper); }
+.report[hidden] { display: none; }
+.row-inline { display: flex; gap: 10px; flex-wrap: wrap; }
+.r-lesson { margin-bottom: 14px; }
+.r-turns { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 8px; font-size: 16px; }
+.r-turns q { font-weight: 600; }
+.r-thoth { color: var(--lapis); font-size: 15px; }
+.r-quiz { color: var(--faience); font-weight: 600; }
+@media print {
+  .top, .kid, .how, .report .row-inline { display: none !important; }
+  .report { display: block !important; border: 0; background: #fff; }
+  body { background: #fff; }
+}
+
 /* Thoth, the teacher */
 .thoth { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 18px;
   background: color-mix(in srgb, var(--lapis) 8%, var(--card)); border: 2px solid var(--lapis); }

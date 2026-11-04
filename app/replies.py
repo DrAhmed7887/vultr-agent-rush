@@ -37,6 +37,13 @@ ECHO = {
 }
 
 
+from .skills_y6 import Y6  # noqa: E402
+
+for _k, _v in Y6.items():
+    FIXED[f"welcome_{_k}"] = _v["welcome"]
+    ECHO[_k] = {**_v["echo"], "unknown": "I'm doing something new now, but {a} still trips me up."}
+
+
 def echo(skill: str, behaves_like: str, probe: Sequence[int] | None, answer: object) -> str:
     if behaves_like == "correct":
         return FIXED["cured"]
@@ -78,11 +85,26 @@ def explain(skill: str, args: Sequence[int], out: object, prefer: str = "") -> s
     if out is None:
         return "Hmm, I didn't get an answer for that one."
     if sk.grade(args, out):
+        if skill in Y6:
+            return f"{sk.show_answer(args, out)}!"
         if skill == "compare_decimals":
             return "They're equal!" if out == 0 else f"{sk.show_answer(args, out).replace(' is bigger', '')} is bigger!"
         return f"It's {sk.show_answer(args, out)}!"
     hyps = classifier.HYPOTHESES[skill]
     want = classifier._norm(skill, out)
+    if skill in Y6:
+        ans = sk.show_answer(args, out)
+        for key in sorted(hyps, key=lambda k: k != prefer):
+            if key == "correct":
+                continue
+            try:
+                if want is not None and classifier._norm_truth(skill, hyps[key][1](args)) == want:
+                    line = Y6[skill]["why"](key, args, out, ans)
+                    if line:
+                        return line
+            except ZeroDivisionError:
+                continue
+        return f"I said {ans}. I'm not sure why!"
     for key in sorted(hyps, key=lambda k: k != prefer):
         if key == "correct":
             continue

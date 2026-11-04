@@ -47,6 +47,7 @@ Helpers you may call:
   digit(digits, places, k)  -> the k-th digit after the decimal point (k=1 is tenths); 0 if k > places
   pad(digits, places, to)   -> digits with zeros added on the right to reach `to` places
   gcd(a, b)                 -> greatest common divisor
+  apply(op, x, y)           -> one operation: op 1 is +, 2 is -, 3 is times, 4 is divide
 A decimal like 0.45 is given as whole=0, digits=45, places=2. A fraction 3/4 is top=3, bottom=4.
 
 Reply with JSON only:
@@ -94,13 +95,14 @@ class Compiled:
     usage: dict = field(default_factory=dict)
 
 
-def _messages(current: str, sentence: str, teacher_note: str = "") -> list[dict]:
+def _messages(current: str, sentence: str, teacher_note: str = "", brief: str = "") -> list[dict]:
     msgs = [{"role": "system", "content": SYSTEM}]
     for _, old, said, answer in FEW_SHOTS:
         msgs.append({"role": "user", "content": f"CURRENT CODE:\n{old}\nCHILD SAID:\n{said}"})
         msgs.append({"role": "assistant", "content": json.dumps(answer)})
     note = f"\nTEACHER'S NOTE ON YOUR LAST TRY: {teacher_note} Compile the child's words again, all of them, and nothing more." if teacher_note else ""
-    msgs.append({"role": "user", "content": f"CURRENT CODE:\n{current}\nCHILD SAID:\n{sentence}{note}"})
+    about = f"ABOUT THE INPUTS: {brief}\n" if brief else ""
+    msgs.append({"role": "user", "content": f"{about}CURRENT CODE:\n{current}\nCHILD SAID:\n{sentence}{note}"})
     return msgs
 
 
@@ -122,8 +124,14 @@ def _key(n: ast.AST) -> str:
     return ast.unparse(n)
 
 
+def _is_code_check(n: ast.AST) -> bool:
+    """`op1 == 3` or `brackets == 2`: choosing a case by its code, not doing maths."""
+    return (isinstance(n, ast.Compare) and len(n.ops) == 1 and isinstance(n.ops[0], (ast.Eq, ast.NotEq))
+            and (isinstance(n.left, ast.Constant) or isinstance(n.comparators[0], ast.Constant)))
+
+
 def _patterns_tree(tree: ast.AST) -> set[str]:
-    return {_key(n) for n in ast.walk(tree) if isinstance(n, (ast.BinOp, ast.Compare))}
+    return {_key(n) for n in ast.walk(tree) if isinstance(n, (ast.BinOp, ast.Compare)) and not _is_code_check(n)}
 
 
 def _patterns(code: str) -> set[str]:
@@ -167,6 +175,22 @@ def _busiest_expression(code: str) -> int:
     return best
 
 
+def _quoted(quote: str, said: str) -> bool:
+    """The quote is the child's words, exactly. A quote shortened with "..." counts only if every
+    piece is word for word from the sentence, in the same order."""
+    pieces = [_norm(x) for x in re.split(r"\.\.\.|…", quote)]
+    pieces = [x for x in pieces if x]
+    if not pieces:
+        return False
+    at = 0
+    for piece in pieces:
+        i = said.find(piece, at)
+        if i < 0:
+            return False
+        at = i + len(piece)
+    return True
+
+
 def quote_check(sentence: str, current: str, steps: list, code: str) -> str:
     """Return "" if the patch is honest, or the reason it was rejected."""
     said = _norm(sentence)
@@ -174,8 +198,7 @@ def quote_check(sentence: str, current: str, steps: list, code: str) -> str:
         return "no step ties the change to the child's words"
     declared: set[str] = set()
     for st in steps:
-        q = _norm(str(st.get("quote", "")))
-        if not q or q not in said:
+        if not _quoted(str(st.get("quote", "")), said):
             return f"a step quotes words the child didn't say: {st.get('quote')!r}"
         pats = _step_patterns(str(st.get("code", "")))
         if len(pats - _patterns(current)) > MAX_PATTERNS_PER_STEP:
@@ -201,11 +224,11 @@ def _call(model: str, messages: list[dict], timeout: float) -> tuple[dict, dict,
 
 
 def compile_sentence(current: str, sentence: str, model: str | None = None, timeout: float = 25.0,
-                     teacher_note: str = "") -> Compiled:
+                     teacher_note: str = "", brief: str = "") -> Compiled:
     """Two attempts: a rejected patch is retried with the reason; if the main model's call fails,
     the second attempt uses the fallback model on the same Vultr endpoint."""
     model = model or MODEL
-    messages = _messages(current, sentence, teacher_note)
+    messages = _messages(current, sentence, teacher_note, brief)
     last = Compiled(False, reason="not run", model=model)
     for attempt in range(2):
         try:

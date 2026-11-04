@@ -142,3 +142,56 @@ def test_thoth_hints_only_when_stuck(monkeypatch):
     audit = {"faithful": False, "missed": "they're equal", "added": ""}
     t = main._thoth(sk, hw, ["one"], wrong, "", audit)
     assert t["kind"] == "audit" and t["action"] == "listen_again" and "they're equal" in t["say"]
+
+
+CORRECT_Y6 = {
+    "times_tens": "def solve(digits, places, zeros):\n    if places >= zeros:\n        return (digits, places - zeros)\n    return (pad(digits, places, zeros), 0)\n",
+    "compare_fractions": "def solve(top1, bottom1, top2, bottom2):\n    a = top1 * bottom2\n    b = top2 * bottom1\n    if a > b:\n        return 1\n    if b > a:\n        return 2\n    return 0\n",
+    "order_of_operations": ("def solve(a, op1, b, op2, c, brackets):\n    if brackets == 2 or (brackets == 0 and op2 >= 3 and op1 <= 2):\n"
+                            "        return apply(op1, a, apply(op2, b, c))\n    return apply(op2, apply(op1, a, b), c)\n"),
+    "intervals": "def solve(start, end):\n    return end - start\n",
+}
+
+
+def _run_local(code, probs):
+    """Trusted test code only (ours, never a child's): runs with the sandbox's helpers."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("runner", "sandbox/runner.py")
+    runner = importlib.util.module_from_spec(spec); spec.loader.exec_module(runner)
+    env = {"digit": runner.digit, "pad": runner.pad, "gcd": runner.gcd, "apply": runner.apply}
+    exec(code, env)
+    return [env["solve"](*p) for p in probs]
+
+
+def test_year6_skills_start_wrong_and_can_be_cured():
+    from app import guard
+    from app.skills import KIND, SKILLS, tricks
+    from app.skills_y6 import Y6
+    for name, correct in CORRECT_Y6.items():
+        sk = SKILLS[name]
+        probs = sk.problems(11, 40)
+        assert guard.check(sk.start_code, sk.args).ok and guard.check(correct, sk.args).ok, name
+        start = tricks(name, probs, [sk.grade(p, o) for p, o in zip(probs, _run_local(sk.start_code, probs))])
+        assert any(t["learned"] for t in start) and not all(t["learned"] for t in start), (name, start)
+        cured = [sk.grade(p, o) for p, o in zip(probs, _run_local(correct, probs))]
+        assert all(cured), name
+        hw = Y6[name]["homework"]
+        assert not sk.grade(hw, _run_local(sk.start_code, [hw])[0]), name   # his first homework is wrong
+        assert KIND[name](hw) in [k for k, _, _ in Y6[name]["tricks"]]
+
+
+def test_year6_reasons_describe_his_rule():
+    from app.replies import explain
+    assert explain("times_tens", (45, 2, 1), (450, 3)) == "0.450! Times 10 means add 1 zero on the end."
+    assert explain("compare_fractions", (1, 4, 1, 8), 2) == "1/8! 8 is a bigger bottom than 4."
+    assert explain("order_of_operations", (2, 1, 3, 3, 4, 0), 20) == "2 + 3 is 5, then × 4 makes 20. Left to right!"
+    assert explain("intervals", (-4, 7), 3) == "3 degrees! I take 4 away from 7. Minus signs don't matter."
+    assert explain("intervals", (-4, 7), 11) == "11 degrees!"
+
+
+def test_shortened_quotes_must_still_be_the_childs_words():
+    from app.compiler import _norm, _quoted
+    said = _norm("Count up from the first number to the second number, going through zero.")
+    assert _quoted("Count up from the first number to... zero", said)
+    assert not _quoted("zero... Count up", said)                 # wrong order
+    assert not _quoted("Count up from the first number to... ten", said)

@@ -22,6 +22,19 @@ def pad(digits, places, to):
     return digits * (10 ** (to - places))
 
 
+def apply(op, x, y):
+    """One operation: 1 is +, 2 is -, 3 is x, 4 is divide (whole numbers)."""
+    if op == 1:
+        return x + y
+    if op == 2:
+        return x - y
+    if op == 3:
+        return x * y
+    if op == 4:
+        return x // y
+    return 0
+
+
 def gcd(a, b):
     a, b = abs(a), abs(b)
     while b:
@@ -53,7 +66,7 @@ def _clean(out):
 
 def main():
     req = json.loads(sys.stdin.read())
-    env = {"__builtins__": SAFE_BUILTINS, "digit": digit, "pad": pad, "gcd": gcd}
+    env = {"__builtins__": SAFE_BUILTINS, "digit": digit, "pad": pad, "gcd": gcd, "apply": apply}
     try:
         exec(compile(req["code"], "<ahmes>", "exec"), env)
         fn = env["solve"]

@@ -12,7 +12,7 @@ from dataclasses import dataclass
 MAX_LINES = 40
 MAX_BYTES = 2048
 MAX_CONST = 10 ** 6
-ALLOWED_CALLS = {"abs", "min", "max", "range", "digit", "pad", "gcd"}
+ALLOWED_CALLS = {"abs", "min", "max", "range", "digit", "pad", "gcd", "apply"}
 
 ALLOWED_NODES = (
     ast.Module, ast.FunctionDef, ast.arguments, ast.arg, ast.Return, ast.Assign, ast.AugAssign,

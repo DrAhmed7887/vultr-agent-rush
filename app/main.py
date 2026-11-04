@@ -23,7 +23,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from . import classifier, compiler, fixtures, guard, listen, replies, sandbox, teacher, voice
-from .skills import HOMEWORK, KIND, SKILLS, TRICKS, valid_problem
+from .skills import BRIEF, HOMEWORK, IDEAS, KIND, SKILLS, TRICKS, VIEW, YEAR, valid_problem
+from .skills_y6 import Y6
 from .skills import tricks as trick_table
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -161,6 +162,8 @@ def _timed(fn, *a):
 def _picture(sk, args) -> str:
     """What the picture on the child's screen shows, in words, for Thoth's hint."""
     from .skills import dec_text, dec_truth, frac_truth
+    if sk.name in Y6:
+        return Y6[sk.name]["picture"](args)
     if sk.name == "compare_decimals":
         a, b, tr = dec_text(*args[:3]), dec_text(*args[3:]), dec_truth(args)
         return f"{a} and {b} land on the same spot on the number line" if tr == 0 else \
@@ -187,6 +190,14 @@ def _thoth(sk, hw, attempts: list, retry: dict | None, outcome: str, aud: dict |
         if h:
             return {"kind": "hint", "say": h}
     return None
+
+
+def _remember(s: dict, skill: str, sentence: str, outcome: str, right, retry, th) -> None:
+    """One line of the lesson report. Kept in memory with the session, never written to disk."""
+    s.setdefault("log", {}).setdefault(skill, []).append({
+        "at": time.time(), "kind": "teach", "sentence": sentence, "outcome": outcome, "right": right,
+        "homework": retry["problem"] if retry else None, "fixed_homework": bool(retry and retry["ok"]),
+        "thoth": th["say"] if th else None})
 
 
 _start: dict[str, dict] = {}
@@ -223,19 +234,31 @@ def _read_out(sk, run: sandbox.RunResult, probs: list) -> dict:
 
 
 @app.post("/api/session")
-def new_session(request: Request) -> dict:
+def new_session(request: Request, resume: str = "") -> dict:
+    """A new session, or the same one again if this browser still has a live one (progress is
+    kept in the server's memory for 24 hours, never on disk)."""
     _limit(request, 30, "session")
-    sid = secrets.token_urlsafe(12)
     with _lock:
-        _sessions[sid] = {"created": time.time(), "seed": TEACH_SEED,
-                          "brains": {k: s.start_code for k, s in SKILLS.items()}, "history": {k: [] for k in SKILLS}}
+        old = _sessions.get(resume[:40]) if resume else None
+        if old and time.time() - old["created"] <= SESSION_TTL_S:
+            sid, sess = resume[:40], old
+        else:
+            sid = secrets.token_urlsafe(12)
+            sess = _sessions[sid] = {"created": time.time(), "seed": TEACH_SEED,
+                                     "brains": {k: s.start_code for k, s in SKILLS.items()}, "history": {k: [] for k in SKILLS}}
+    progress = sess.setdefault("progress", {})
     out = {}
     for k, sk in SKILLS.items():
         st = _start_state(sk)
-        hw = dict(st["homework"], voice=voice.speak(st["homework"]["why"]))
-        out[k] = {"title": sk.title, "code": sk.start_code, "welcome": replies.FIXED[f"welcome_{k}"],
-                  "voice": voice.speak(replies.FIXED[f"welcome_{k}"]), "homework": hw, "tricks": st["tricks"]}
-    return {"sid": sid, "skills": out}
+        mine = progress.get(k, {})
+        card = mine.get("homework") or st["homework"]
+        hw = dict(card, voice=voice.speak(card["why"]))
+        out[k] = {"title": sk.title, "view": VIEW[k], "year": YEAR[k], "ideas": IDEAS[k],
+                  "code": sk.start_code, "current": sess["brains"][k], "welcome": replies.FIXED[f"welcome_{k}"],
+                  "voice": voice.speak(replies.FIXED[f"welcome_{k}"]), "homework": hw,
+                  "start_homework": st["homework"], "tricks": mine.get("tricks") or st["tricks"],
+                  "start_tricks": st["tricks"], "won": bool(mine.get("won"))}
+    return {"sid": sid, "resumed": sid == resume, "skills": out}
 
 
 @app.post("/api/teach")
@@ -263,7 +286,7 @@ def teach(t: Teach, request: Request) -> dict:
     if hw is not None and not valid_problem(sk.name, hw):
         raise HTTPException(400, "Bad homework problem")
     safety = _pool.submit(_timed, listen.safe, sentence)
-    comp = compiler.compile_sentence(current, sentence, teacher_note=note)
+    comp = compiler.compile_sentence(current, sentence, teacher_note=note, brief=BRIEF.get(sk.name, ""))
     mark("compile", model=comp.model, ok=comp.ok, tokens=comp.usage.get("total_tokens"))
     verdict, safety_ms = safety.result(timeout=15)
     mark("safety", verdict=verdict, model=listen.SAFETY_MODEL, took_ms=safety_ms)
@@ -304,6 +327,7 @@ def teach(t: Teach, request: Request) -> dict:
         line = replies.FIXED["dizzy" if outcome == "timeout" else "too_full"]
         s["last"][sk.name] = {"sentence": sentence}
         th = _thoth(sk, hw, attempts, None, outcome)
+        _remember(s, sk.name, sentence, outcome, None, None, th)
         return {"outcome": outcome, "say": line, "teacher": th, "audit": aud, "voice": voice.speak(line), "steps": comp.steps,
                 "proposed": comp.code, "grade": grade, "run": {"id": run_id, **run.receipt, "verdict": run.verdict},
                 "timeline": timeline, "code": current}
@@ -328,9 +352,15 @@ def teach(t: Teach, request: Request) -> dict:
     if th and th.get("kind") == "audit":
         mark("teacher_steps_in", why="code doesn't match the words")
     mark("reply")
+    tr = trick_table(sk.name, probs, [r["ok"] for r in grade["rows"]])
+    prog = s.setdefault("progress", {}).setdefault(sk.name, {})
+    prog["tricks"] = tr
+    if retry:
+        prog["homework"] = {k: v for k, v in retry.items() if k != "voice"}
+    _remember(s, sk.name, sentence, "cured" if grade["right"] == grade["total"] else "partial", grade["right"], retry, th)
     return {"outcome": "cured" if grade["right"] == grade["total"] else "partial", "say": line, "voice": voice.speak(line),
             "steps": comp.steps, "code": comp.code, "previous": current, "grade": grade, "read_out": cls,
-            "retry": retry, "teacher": th, "audit": aud, "tricks": trick_table(sk.name, probs, [r["ok"] for r in grade["rows"]]),
+            "retry": retry, "teacher": th, "audit": aud, "tricks": tr,
             "run": {"id": run_id, **run.receipt, "verdict": run.verdict}, "timeline": timeline}
 
 
@@ -351,11 +381,17 @@ def quiz(q: SkillReq, request: Request) -> dict:
         card = _card(sk, probs[pick], by_i.get(pick), prefer)
         cards.append({**card, "trick": key, "trick_name": name})
     nxt = next((c for c in cards if not c["ok"]), None)
+    tr = trick_table(sk.name, probs, [r["ok"] for r in grade["rows"]])
+    prog = s.setdefault("progress", {}).setdefault(sk.name, {})
+    prog["tricks"] = tr
+    prog["won"] = prog.get("won", False) or nxt is None
     if nxt:
+        prog["homework"] = dict(nxt)
         nxt["voice"] = voice.speak(nxt["why"])
+    s.setdefault("log", {}).setdefault(sk.name, []).append(
+        {"at": time.time(), "kind": "quiz", "right": grade["right"], "total": grade["total"]})
     return {"grade": grade, "cards": cards, "next_homework": nxt,
-            "tricks": trick_table(sk.name, probs, [r["ok"] for r in grade["rows"]]),
-            "run": {"id": run_id, **run.receipt, "verdict": run.verdict}}
+            "tricks": tr, "run": {"id": run_id, **run.receipt, "verdict": run.verdict}}
 
 
 @app.post("/api/listen")
@@ -378,6 +414,8 @@ def reset(q: SkillReq) -> dict:
     s, sk = _session(q.sid), _skill(q.skill)
     s["brains"][sk.name] = sk.start_code
     s["history"][sk.name] = []
+    s.get("progress", {}).pop(sk.name, None)
+    s.get("log", {}).pop(sk.name, None)
     return {"code": sk.start_code}
 
 
@@ -422,6 +460,23 @@ def beyond(name: str, request: Request) -> dict:
     run_id = _log_run(f"beyond:{name}", run)
     return {"name": name, "label": fx["label"], "script": fx["script"], "verdict": run.verdict,
             "output": run.receipt.get("output", ""), "run": {"id": run_id, **run.receipt, "verdict": run.verdict}}
+
+
+@app.get("/api/report")
+def report(request: Request, sid: str = "") -> dict:
+    """For a parent or teacher: what the child taught, what Ahmes learned, when Thoth stepped in."""
+    _limit(request, 30, "read")
+    s = _session(sid[:40])
+    lessons = []
+    for k, sk in SKILLS.items():
+        log = s.get("log", {}).get(k, [])
+        if not log:
+            continue
+        prog = s.get("progress", {}).get(k, {})
+        tr = prog.get("tricks") or _start_state(sk)["tricks"]
+        lessons.append({"skill": k, "title": sk.title, "year": YEAR[k], "won": bool(prog.get("won")),
+                        "tricks": [{"name": t["name"], "learned": t["learned"]} for t in tr], "turns": log})
+    return {"lessons": lessons, "made_at": time.time()}
 
 
 @app.get("/api/receipt/{run_id}")
@@ -472,6 +527,14 @@ def _startup() -> None:
     threading.Thread(target=sandbox.sweeper_forever, daemon=True).start()
     for line in replies.FIXED.values():   # pre-render Ahmes's fixed lines
         _pool.submit(voice.speak, line)
+
+    def warm() -> None:   # each lesson's starting brain, once, so the first visitor doesn't wait
+        for sk in SKILLS.values():
+            try:
+                voice.speak(_start_state(sk)["homework"]["why"])
+            except Exception:  # noqa: BLE001
+                pass
+    _pool.submit(warm)
 
 
 app.mount("/", StaticFiles(directory=ROOT / "web", html=True), name="web")

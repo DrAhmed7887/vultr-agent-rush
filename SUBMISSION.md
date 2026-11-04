@@ -10,11 +10,11 @@ Teach Ahmes turns a learner's maths explanation into executable robot behaviour,
 
 Ahmes is a robot classmate who is sure that 0.45 is bigger than 0.5 and that 1/2 + 1/3 = 2/5. These are classic, well-documented misconceptions for 10-year-olds. A child explains the rule in plain words, and an LLM on Vultr Serverless Inference (qwen3.8-27b) turns the words into Ahmes's `solve()` function. It is constrained to the child's words: every step must quote them exactly, and a mechanical check rejects maths the child didn't explain. So what the child says matters: "Look at the tenths first" gives 24/40, and the full place-by-place rule gives 40/40.
 
-Every new brain runs in a brand-new container on a Vultr Cloud Compute VM (Madrid). The container has:
+Six lessons come from the Year 5 and Year 6 National Curriculum for England (decimals, adding and comparing fractions, times 10/100/1,000, order of operations, temperatures below zero), each starting from a documented childhood mistake. Every new brain runs in a brand-new gVisor container on a Vultr Cloud Compute VM (Madrid). The container has:
 - no network;
 - no secrets;
 - 64 MB of memory and half a CPU;
-- 32 processes;
+- a 64-process limit, under gVisor's user-space kernel;
 - a read-only root filesystem;
 - a 3-second limit.
 

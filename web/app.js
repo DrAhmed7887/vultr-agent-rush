@@ -3,20 +3,8 @@
 // check his homework -> see why -> teach him (talk or type) -> he tries again -> quiz -> next homework.
 // Every answer Ahmes gives comes from his code running in a Vultr sandbox; the pictures are exact maths.
 
-const IDEAS = {
-  compare_decimals: [
-    "Look at the tenths first.",
-    "If the tenths are the same, check the next place, and if every place is the same, they're equal.",
-    "The longer number is bigger because it has more digits.",
-  ],
-  add_fractions: [
-    "Make the bottoms the same by multiplying, then add the tops.",
-    "Multiply the bottoms together, multiply each top by the other bottom, then add the tops.",
-    "Keep doubling both bottoms until they're the same.",
-  ],
-};
-const SCREENS = ["check", "proof", "teach", "think", "retry", "oops", "quiz", "win"];
-const PATH_OF = { check: "check", proof: "check", teach: "teach", think: "teach", retry: "retry", oops: "teach", quiz: "quiz", win: "quiz" };
+const SCREENS = ["map", "check", "proof", "teach", "think", "retry", "oops", "quiz", "win"];
+const PATH_OF = { map: "", check: "check", proof: "check", teach: "teach", think: "teach", retry: "retry", oops: "teach", quiz: "quiz", win: "quiz" };
 
 const state = { sid: null, skill: "compare_decimals", skills: {}, voice: true, audio: new Audio(), busy: false };
 const sk = () => state.skills[state.skill];
@@ -35,6 +23,8 @@ window.kidReact = (cls, text, voice) => { setRobot(cls); say(text, voice); };
 function show(name) {
   SCREENS.forEach((s) => { $(`s-${s}`).hidden = s !== name; });
   const at = ["check", "teach", "retry", "quiz"].indexOf(PATH_OF[name]);
+  $("path").hidden = name === "map";
+  document.querySelector(".tricks").hidden = name === "map";
   document.querySelectorAll("#path li").forEach((li, i) => {
     li.classList.toggle("done", i < at); li.classList.toggle("now", i === at);
     li.toggleAttribute("aria-current", i === at);
@@ -56,14 +46,14 @@ function renderTricks(tricks) {
 // ---------- step 1: check his homework ----------
 function homework(card) {
   sk().homework = card;
-  $("check-problem").innerHTML = problemHTML(state.skill, card.args, card.out, "his");
+  $("check-problem").innerHTML = problemForView(sk().view, card.args, card.out, "his");
   setRobot(); say(card.why, card.voice);
   show("check");
 }
 
 function markHomework(childSaysRight) {
   const hw = sk().homework;
-  const p = proofFor(state.skill, hw.args, hw.out);
+  const p = proofForView(sk().view, hw.args, hw.out);
   $("proof-visual").innerHTML = p.svg + (p.zoom ? `<p class="zoom">${esc(p.zoom)}</p>` : "");
   if (hw.ok) {
     $("proof-title").textContent = childSaysRight ? "Yes! He got this one right" : "Look again: he's right this time";
@@ -85,7 +75,7 @@ function markHomework(childSaysRight) {
 function teachScreen(again) {
   $("teach-title").textContent = again ? "Teach him again, another way" : "How should Ahmes do it?";
   $("teach-err").hidden = true;
-  $("starters").innerHTML = IDEAS[state.skill].map((s) => `<button class="starter" type="button">${esc(s)}</button>`).join("");
+  $("starters").innerHTML = sk().ideas.map((s) => `<button class="starter" type="button">${esc(s)}</button>`).join("");
   $("starters").querySelectorAll(".starter").forEach((b) => b.addEventListener("click", () => {
     $("sentence").value = b.textContent; $("sentence").focus(); $("teach-err").hidden = true;
   }));
@@ -148,7 +138,7 @@ function afterTeach(d, sentence) {
   renderTricks(d.tricks);
   const r = d.retry;
   $("you-said").textContent = quoteLine(d.steps, sentence);
-  $("retry-problem").innerHTML = problemHTML(state.skill, r.args, r.out, r.ok ? "ok" : "bad");
+  $("retry-problem").innerHTML = problemForView(sk().view, r.args, r.out, r.ok ? "ok" : "bad");
   $("retry-why").hidden = r.ok;
   if (r.ok) {
     $("retry-title").textContent = "He got his homework right!";
@@ -213,10 +203,9 @@ function quizResult(d) {
   renderTricks(d.tricks);
   if (!d.next_homework) {
     setRobot("is-happy");
-    const other = state.skill === "compare_decimals" ? "add_fractions" : "compare_decimals";
-    $("win-sub").textContent = `He got all ${d.grade.total} brand-new ${state.skill === "compare_decimals" ? "decimal" : "fraction"} problems right, checked in a safe box.`;
-    $("win-next").textContent = other === "add_fractions" ? "Teach him fractions" : "Teach him decimals";
-    $("win-next").dataset.skill = other;
+    sk().won = true;
+    $("win-title").textContent = `You taught Ahmes every trick in “${sk().title}”!`;
+    $("win-sub").textContent = `He got all ${d.grade.total} brand-new problems right, checked in a safe box.`;
     say("I got every one right! You're my teacher!");
     return show("win");
   }
@@ -282,26 +271,79 @@ function micUI(mode) {
   $("mic").disabled = mode === "hearing";
 }
 
-// ---------- skills, start ----------
+// ---------- lessons, saving, certificate, report ----------
 function setSkill(name) {
   state.skill = name;
-  document.querySelectorAll(".skill").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.skill === name)));
+  $("lesson-name").textContent = sk().title;
   $("sentence").value = "";
   renderTricks(sk().tricks);
   renderCode(sk().current || sk().code); renderWords("", []); renderGrid(null);
   homework(sk().homework);
 }
 
+function renderMap(welcomeBack) {
+  $("map-title").textContent = welcomeBack ? "Welcome back! Pick a lesson" : "What shall we teach Ahmes?";
+  $("lessons").innerHTML = Object.entries(state.skills).map(([k, s]) => {
+    const known = s.tricks.filter((t) => t.learned).length;
+    const status = s.won ? "Taught" : known > s.start_tricks.filter((t) => t.learned).length ? "In progress" : "New";
+    const dots = s.tricks.map((t) => `<span class="dot${t.learned ? " on" : ""}"></span>`).join("");
+    return `<li><button class="lesson${s.won ? " won" : ""}" type="button" data-k="${k}">
+      <span class="l-title">${esc(s.title)}</span><span class="l-year">Year ${s.year}</span>
+      <span class="l-dots" aria-label="${known} of ${s.tricks.length} tricks">${dots}</span><span class="l-status">${status}</span></button></li>`;
+  }).join("");
+  $("lessons").querySelectorAll(".lesson").forEach((b) => b.addEventListener("click", () => setSkill(b.dataset.k)));
+  $("lesson-name").textContent = "Lessons";
+  setRobot(); say(welcomeBack ? "You're back! I remember what you taught me." : "Hi, I'm Ahmes! I think I'm great at maths. Pick a lesson and check my homework!");
+  show("map");
+}
+
 async function startOver() {
   const d = await api("/api/reset", { sid: state.sid, skill: state.skill });
-  sk().current = d.code; sk().tricks = sk().startTricks; sk().homework = sk().startHomework;
+  Object.assign(sk(), { current: d.code, tricks: sk().start_tricks, homework: sk().start_homework, won: false });
   setSkill(state.skill);
+}
+
+// The certificate: drawn on a canvas in the browser, saved as a PNG. No name is asked for.
+function certificate() {
+  const c = document.createElement("canvas"); c.width = 1200; c.height = 850;
+  const g = c.getContext("2d");
+  g.fillStyle = "#F7FAFD"; g.fillRect(0, 0, 1200, 850);
+  g.strokeStyle = "#D9E6F3"; g.lineWidth = 1;
+  for (let x = 0; x < 1200; x += 30) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, 850); g.stroke(); }
+  for (let y = 0; y < 850; y += 30) { g.beginPath(); g.moveTo(0, y); g.lineTo(1200, y); g.stroke(); }
+  g.strokeStyle = "#E0A526"; g.lineWidth = 10; g.strokeRect(40, 40, 1120, 770);
+  g.fillStyle = "#2449A8"; g.textAlign = "center";
+  g.font = "800 64px Lexend, sans-serif"; g.fillText("Teacher of Ahmes", 600, 200);
+  g.fillStyle = "#16224A"; g.font = "500 34px Lexend, sans-serif";
+  g.fillText("This certificate is for the teacher who taught Ahmes", 600, 300);
+  g.font = "700 44px Lexend, sans-serif"; g.fillText(`“${sk().title}”`, 600, 380);
+  g.font = "500 30px Lexend, sans-serif";
+  g.fillText(`Every trick: ${sk().tricks.map((t) => t.name).join(", ")}`.slice(0, 90), 600, 460);
+  g.fillText("He then got 40 brand-new problems right, checked by plain arithmetic.", 600, 520);
+  g.fillStyle = "#4E5B80"; g.font = "400 26px Lexend, sans-serif";
+  g.fillText(new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }), 600, 700);
+  g.beginPath(); g.arc(1010, 660, 90, 0, Math.PI * 2); g.fillStyle = "#E0A526"; g.fill();
+  g.fillStyle = "#16224A"; g.font = "800 26px Lexend, sans-serif"; g.fillText("Thoth", 1010, 650); g.fillText("approves", 1010, 684);
+  c.toBlob((b) => { const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "teacher-of-ahmes.png"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); });
+}
+
+const OUTCOME = { cured: "cured him", partial: "helped", timeout: "made him dizzy", oom: "filled his head" };
+async function showReport() {
+  try {
+    const r = await fetch(`/api/report?sid=${encodeURIComponent(state.sid)}`).then((x) => x.json());
+    $("report-body").innerHTML = !r.lessons || !r.lessons.length ? `<p class="hint">Nothing taught yet. Teach Ahmes a lesson, then come back.</p>` :
+      r.lessons.map((l) => `<section class="card r-lesson"><h3>${esc(l.title)} <span class="l-year">Year ${l.year}</span> ${l.won ? "★ taught" : ""}</h3>
+        <p class="hint">Tricks learned: ${l.tricks.filter((t) => t.learned).map((t) => esc(t.name)).join(", ") || "none yet"}</p>
+        <ol class="r-turns">${l.turns.map((t) => t.kind === "quiz" ? `<li class="r-quiz">Quiz: ${t.right} of ${t.total} right</li>` :
+          `<li><q>${esc(t.sentence)}</q> ${esc(OUTCOME[t.outcome] || t.outcome)}${t.right != null ? ` (${t.right}/40)` : ""}${t.homework ? `; on ${esc(t.homework)} he was ${t.fixed_homework ? "right" : "still wrong"}` : ""}${t.thoth ? `<br><span class="r-thoth">Thoth: ${esc(t.thoth)}</span>` : ""}</li>`).join("")}</ol></section>`).join("");
+  } catch { $("report-body").innerHTML = `<p class="hint">The report couldn't load. Try again.</p>`; }
+  $("report").hidden = false; $("how").hidden = true; $("report").scrollIntoView({ behavior: "smooth" });
 }
 
 async function start() {
   setupHow();
   if (!(navigator.mediaDevices && window.MediaRecorder)) $("mic").hidden = true;
-  document.querySelectorAll(".skill").forEach((b) => b.addEventListener("click", () => !state.busy && setSkill(b.dataset.skill)));
+  $("lessons-btn").addEventListener("click", () => !state.busy && renderMap(false));
   $("mark-yes").addEventListener("click", () => markHomework(true));
   $("mark-no").addEventListener("click", () => markHomework(false));
   $("go-teach").addEventListener("click", () => ($("go-teach").dataset.next === "quiz" ? quiz() : teachScreen(false)));
@@ -313,13 +355,17 @@ async function start() {
   $("retry-next").addEventListener("click", () => ($("retry-next").dataset.next === "quiz" ? quiz() : teachScreen(true)));
   $("retry-why").addEventListener("click", () => {
     const hw = sk().homework; const r = { ...hw };
-    $("proof-visual").innerHTML = proofFor(state.skill, r.args, null).svg;
-    $("proof-title").textContent = "Here's the right answer"; $("proof-text").textContent = proofFor(state.skill, r.args, null).caption;
+    $("proof-visual").innerHTML = proofForView(sk().view, r.args, null).svg;
+    $("proof-title").textContent = "Here's the right answer"; $("proof-text").textContent = proofForView(sk().view, r.args, null).caption;
     $("go-teach").textContent = "Teach him again"; $("go-teach").dataset.next = "teach"; show("proof");
   });
   $("oops-again").addEventListener("click", () => teachScreen(true));
   $("quiz-next").addEventListener("click", () => homework(sk().nextHomework));
-  $("win-next").addEventListener("click", () => setSkill($("win-next").dataset.skill));
+  $("win-next").addEventListener("click", () => renderMap(false));
+  $("win-cert").addEventListener("click", certificate);
+  $("report-btn").addEventListener("click", showReport);
+  $("report-print").addEventListener("click", () => window.print());
+  $("report-close").addEventListener("click", () => { $("report").hidden = true; window.scrollTo({ top: 0, behavior: "smooth" }); });
   $("win-reset").addEventListener("click", startOver);
   $("sound").addEventListener("click", () => {
     state.voice = !state.voice; $("sound").setAttribute("aria-pressed", String(state.voice));
@@ -330,11 +376,13 @@ async function start() {
     $("how-btn").textContent = open ? "Back to Ahmes" : "How it works";
     if (open) { refreshLog(); $("how").scrollIntoView({ behavior: "smooth" }); } else window.scrollTo({ top: 0, behavior: "smooth" });
   });
+  let saved = "";
+  try { saved = localStorage.getItem("ahmes_sid") || ""; } catch { /* private mode: no saving */ }
   try {
-    const d = await api("/api/session");
+    const d = await api(`/api/session${saved ? `?resume=${encodeURIComponent(saved)}` : ""}`);
     state.sid = d.sid; state.skills = d.skills;
-    Object.values(state.skills).forEach((s) => { s.startTricks = s.tricks; s.startHomework = s.homework; });
-    setSkill(state.skill);
+    try { localStorage.setItem("ahmes_sid", d.sid); } catch { /* fine */ }
+    renderMap(d.resumed);
     refreshLog();
   } catch (e) { say("I can't reach my brain right now. Try reloading."); }
 }
