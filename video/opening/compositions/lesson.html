@@ -41,10 +41,10 @@
     .title-sub b { color: #12857D; font-weight: 900; }
   </style>
   <div id="root" data-composition-id="lesson" data-width="1920" data-height="1080">
-    <div id="l-ground" class="clip" data-start="0" data-duration="26.3" data-track-index="0"></div>
+    <div id="l-ground" class="clip" data-start="0" data-duration="27.3" data-track-index="0"></div>
 
-    <div id="l-ahmes" class="clip" data-start="0" data-duration="26.3" data-track-index="1">
-      <svg viewBox="0 0 240 280" aria-label="Ahmes the robot">
+    <div id="l-ahmes" class="clip" data-start="0" data-duration="27.3" data-track-index="1">
+      <svg id="l-a-svg" viewBox="0 0 240 280" aria-label="Ahmes the robot">
         <defs>
           <radialGradient id="l-glow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#7FF3E6"/><stop offset="100%" stop-color="#1FA39A"/></radialGradient>
         </defs>
@@ -135,7 +135,7 @@
       </div>
     </div>
 
-    <div id="l-title" class="clip" data-start="23.6" data-duration="2.7" data-track-index="6">
+    <div id="l-title" class="clip" data-start="23.6" data-duration="3.1" data-track-index="6">
       <div class="title-name"><span>T</span><span>e</span><span>a</span><span>c</span><span>h</span><span>&nbsp;</span><span>A</span><span>h</span><span>m</span><span>e</span><span>s</span></div>
       <div id="l-title-sub" class="title-sub">Children teach.<br><b>A sandbox keeps it safe.</b></div>
     </div>
@@ -156,7 +156,7 @@
         timer.textContent = (p * 3).toFixed(1) + " s";
         timer.style.color = p >= 1 ? "#FFD9CF" : "#FFFFFF";
       }
-      tl.to({}, { duration: 26.3, ease: "none", onUpdate: () => renderCounters(tl.time()) }, 0);
+      tl.to({}, { duration: 27.3, ease: "none", onUpdate: () => renderCounters(tl.time()) }, 0);
 
       const show = (sel, on, t, d = 0.12) => tl.to(sel, { opacity: on ? 1 : 0, duration: d, ease: "none" }, t);
       const face = (state, t) => {
@@ -249,6 +249,11 @@
       tl.fromTo("#l-title-sub", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "expo.out" }, 24.3);
       face("happy", 23.8);
       tl.fromTo("#l-a-arm-r", { rotation: 0 }, { keyframes: { rotation: [0, -130, -105, -130, -105, -120] }, svgOrigin: "160 150", duration: 1.4, ease: "power1.inOut" }, 23.8);
+
+      tl.to("#l-a-arm-r", { rotation: 0, svgOrigin: "160 150", duration: 0.4, ease: "power2.inOut" }, 25.8);
+      blurOut("#l-title", 26.3);
+      face("normal", 26.35);
+      tl.fromTo("#l-a-svg", { x: 0, y: 0, scale: 1 }, { x: 199, y: -35, scale: 0.567, transformOrigin: "0 0", duration: 0.6, ease: "power2.inOut" }, 26.5);
 
       renderCounters(0);
       window.__timelines["lesson"] = tl;

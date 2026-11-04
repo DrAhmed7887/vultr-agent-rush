@@ -1,6 +1,6 @@
 # Review: Teach Ahmes opening (draft 1, 4 Nov 2026)
 
-Output: `video/out/opening.mp4`. 26.3 s, 1920×1080, 30 fps, 4.6 MB.
+Output: `video/out/opening.mp4`. 27.3 s, 1920×1080, 30 fps, 4.7 MB. It ends by shrinking Ahmes into his exact spot on the app's first frame, so the cut into `teach-ahmes-demo.mp4` reads as one shot. The joined film is `video/out/teach-ahmes-final.mp4` (2:47, −16.4 LUFS, −1.4 dB peak).
 
 ## Creative calls
 - **One storyline.** It was agreed in chat (the bug, then teaching, then the dizzy rule), so no alternative storylines were drawn up.
