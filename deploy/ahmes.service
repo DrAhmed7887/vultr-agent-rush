@@ -1,0 +1,22 @@
+[Unit]
+Description=Teach Ahmes orchestrator
+After=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+User=ahmes
+Group=ahmes
+SupplementaryGroups=docker
+WorkingDirectory=/opt/ahmes
+EnvironmentFile=/etc/ahmes.env
+Environment=AHMES_AUDIO_CACHE=/var/lib/ahmes/audio
+ExecStart=/opt/ahmes-venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 1 --proxy-headers
+Restart=always
+RestartSec=2
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/var/lib/ahmes
+
+[Install]
+WantedBy=multi-user.target

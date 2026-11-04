@@ -55,7 +55,8 @@ def _limits(name: str) -> dict:
         "network": hc.get("NetworkMode"), "memory_bytes": hc.get("Memory"), "memory_swap_bytes": hc.get("MemorySwap"),
         "nano_cpus": hc.get("NanoCpus"), "pids_limit": hc.get("PidsLimit"), "read_only_root": hc.get("ReadonlyRootfs"),
         "cap_drop": hc.get("CapDrop"), "security_opt": hc.get("SecurityOpt"), "runtime": hc.get("Runtime"),
-        "tmpfs": hc.get("Tmpfs"), "env_count": len(json.loads(p.stdout)[0]["Config"].get("Env") or []),
+        "tmpfs": hc.get("Tmpfs"),
+        "env_names": sorted(e.split("=", 1)[0] for e in (json.loads(p.stdout)[0]["Config"].get("Env") or [])),
         "mounts": len(json.loads(p.stdout)[0].get("Mounts") or []),
     }
 
@@ -69,12 +70,24 @@ def run(code: str, inputs: list, purpose: str = "teach") -> RunResult:
         _slots.release()
 
 
-def _run(code: str, inputs: list, purpose: str) -> RunResult:
+def run_raw(script: str, purpose: str = "beyond-the-guard") -> RunResult:
+    """Run a fixed test script straight in the same container flags, without the guard or runner."""
+    if not _slots.acquire(timeout=5):
+        return RunResult("BUSY")
+    try:
+        return _run(script, [], purpose, raw=True)
+    finally:
+        _slots.release()
+
+
+def _run(code: str, inputs: list, purpose: str, raw: bool = False) -> RunResult:
     name = f"ahmes-{uuid.uuid4().hex[:10]}"
-    payload = json.dumps({"code": code, "inputs": inputs}).encode()
+    payload = b"" if raw else json.dumps({"code": code, "inputs": inputs}).encode()
     receipt: dict = {"container": name, "image": IMAGE, "purpose": purpose,
                      "code_sha256": hashlib.sha256(code.encode()).hexdigest()[:16]}
-    c = _docker("create", "--name", name, *DOCKER_FLAGS, IMAGE)
+    tail = (("--entrypoint", "timeout", IMAGE, "-s", "KILL", "3", "python", "-I", "-S", "-B", "-c", code)
+            if raw else (IMAGE,))
+    c = _docker("create", "--name", name, *DOCKER_FLAGS, *tail)
     if c.returncode:
         return RunResult("ERROR", receipt={**receipt, "error": c.stderr.decode()[:200]})
     receipt["container_id"] = c.stdout.decode().strip()[:12]
@@ -110,7 +123,9 @@ def _run(code: str, inputs: list, purpose: str) -> RunResult:
     gone = _docker("ps", "-aq", "--filter", f"name=^{name}$").stdout.decode().strip() == ""
 
     cases = []
-    for line in out[:MAX_STDOUT].decode(errors="replace").splitlines():
+    if raw:
+        receipt["output"] = out[:2000].decode(errors="replace")
+    for line in ([] if raw else out[:MAX_STDOUT].decode(errors="replace").splitlines()):
         try:
             cases.append(json.loads(line))
         except json.JSONDecodeError:
