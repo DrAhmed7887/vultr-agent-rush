@@ -225,6 +225,20 @@ After each patch, the *patched* brain is classified as a black box, from its out
   - the `docker ps` empty-run-empty shot;
   - honest limits: US inference, runc vs gVisor, Microsandbox as the stronger option, and the Docker group being root.
 
+### ElevenLabs: where it fits and where it doesn't
+Ahmed has an ElevenLabs Student plan: 131k credits a month. The key is in Keychain as `ELEVENLABS_API_KEY`. It narrated the Anamnesis film.
+- **Use it for the demo video and fixed assets:**
+  - the narrator;
+  - the **synthetic child's voice**, designed with Voice Design rather than cloned from a real child;
+  - one Arabic line (Vultr's `qwen3-tts` has no Arabic);
+  - sound effects for the dizzy moment, from the ElevenLabs sound-effects model.
+  - None of this involves child data, and a 2–3 minute film costs only a few thousand credits.
+- **Keep Ahmes's live voice on Vultr TTS** (recommended).
+  - The challenge requires Vultr inference for agent calls, so keeping everything at runtime on Vultr makes the "Application of Technology" story clean.
+  - It also avoids sending child-facing text to a second third party.
+  - Pre-rendered lines use the same Vultr voice, so Ahmes always sounds like himself.
+- **Option, if Vultr's voices sound flat in testing:** pre-render Ahmes's fixed lines with ElevenLabs and say so in the README. It's Ahmed's call after the phase 0 TTS smoke test.
+
 ## 8. Tool workflow
 
 ```mermaid
@@ -255,7 +269,7 @@ Phases run in order. Effort is a rough estimate only. Ahmed decides when each ru
 | **2. Core engine** | about 4 h | Per-task sandbox with streamed results and the four kill layers; sweeper, guard, exact checker, fixed-seed tests, `/api/teach`. | **G2:** a text turn end to end on the VM; kill verified; removal checked by ID |
 | **3. Teaching loop** | about 3 h | Echo templates, behaviour read-out, next probe, Quiz, "bad advice" chips. | **G3:** both arcs run 3 times clean, then **feature freeze** |
 | **3b. UI** (parallel with 2–3) | about 2 h | Robot character SVG, dizzy animation, words-to-code panel, mobile-first layout, Caddy HTTPS. **Builder: Ahmed's choice** (see §15). | Live demo URL on a phone |
-| **4. Video and docs** | about 3 h | Video (synthetic voices, no faces), README with the Vultr section, CLAIMS.md, threat model, cover, slides. | |
+| **4. Video and docs** | about 3 h | Video (ElevenLabs narrator and designed child voice, no faces), README with the Vultr section, CLAIMS.md, threat model, cover, slides. | |
 | **5. Review and submit** | about 1 h | Astra and Gemini 4 pre-submit review, fixes, gVisor only if all green, **submit on lablab** before Sun 8 Nov 22:00 UTC. | |
 
 ## 10. Cut list
