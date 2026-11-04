@@ -1,4 +1,4 @@
-# Teach Ahmes: build spec v2.2 (4 Nov 2026, after 3 red-team reviews: Astra, Claude Opus, Gemini 4)
+# Teach Ahmes: build spec v2.3 (4 Nov 2026, after 3 red-team reviews: Astra, Claude Opus, Gemini 4)
 
 > **Teach the robot. Watch your words become his code.**
 > A child teaches Ahmes, a confident robot classmate who gets decimals and fractions wrong. An AI compiles the child's words *literally* into Ahmes's code. That code runs in a throwaway sandbox on Vultr and is tested on fresh problems. Good explanations cure him, vague ones half-cure him, and some make him dizzy.
@@ -63,7 +63,8 @@ flowchart LR
     A --- DB[(SQLite: runs log; sentences purged after 24 h)]
     W[sweeper: removes any ahmes-* container older than 10 s]
   end
-  A <-->|every model call| I[Vultr Serverless Inference<br/>qwen3.8-27b · qwen3-tts / auk-flash]
+  A <-->|every LLM call| I[Vultr Serverless Inference<br/>qwen3.8-27b · fallback glm-5.3]
+  A -->|Ahmes's reply text only, never the child's words| E[ElevenLabs TTS<br/>Ahmes's voice · cached by text hash]
 ```
 
 **One teach turn**, with progress streamed. We stream rather than promise a latency; the aim is about 4 s.
@@ -80,7 +81,7 @@ flowchart LR
 6. **Verifier** on the VM: exact integer checks; malformed or out-of-range returns count as wrong.
 7. **Behaviour classifier** (§6).
 8. **The echo**, from a template keyed on the **classifier's matched behaviour** plus the counterexample, with no LLM. Example: "So I look at the tenths, but when they're the same I still pick the longer one, like 0.50 > 0.5?" This is the moment the child hears her own rule. Raw quotes can't be made into grammatical sentences, so the echo isn't built from them. *(Gemini.)*
-9. **Reply line** from a template (passed, partial, dizzy, blocked, no_rule), then text to speech. The fixed lines are pre-rendered.
+9. **Reply line** from a template (passed, partial, dizzy, blocked, no_rule), then Ahmes's voice from **ElevenLabs** (only his reply text is sent). The fixed lines are pre-rendered, and the rest is cached by text hash.
 
 ### The literal compiler prompt (skeleton)
 ```
@@ -202,13 +203,13 @@ After each patch, the *patched* brain is classified as a black box, from its out
 **Why it's load-bearing:**
 1. **The sandbox is the product's engine.** Code compiled from a child's words must never run on the child's device. Phones can't run containers anyway. So in the later app, the phone is the face and **Vultr runs Ahmes's brain**; this build *is* that backend.
 2. **The VM is the control plane.** It decides what runs, where, with which limits, for how long, and it proves the container was destroyed.
-3. **One inference API** for the compiler and the voice, all open-weight models, with no GPUs.
+3. **One inference API for every LLM call:** the literal compiler on open-weight models, with no GPUs. Ahmes's *voice* is ElevenLabs (Ahmed's choice). It isn't an LLM call, so the rule that every LLM call goes through Vultr still holds.
 
 | Service | Use | Notes (verified 4 Nov unless marked) |
 |---|---|---|
 | Cloud Compute | `vc2-2c-4gb`, Madrid (`mad`), Marketplace "Docker on Ubuntu 24.04" | $20/mo ($0.027/h). **Stopped VMs are still billed. Destroy after judging.** |
 | Serverless Inference | `https://api.vultrinference.com/v1`, Bearer key | `qwen3.8-27b` $0.15/$1 per M tokens; `glm-5.3` $0.75/$3; JSON-schema output listed |
-| Text to speech | `/v1/audio/speech` | `auk-flash` (English), `qwen3-tts` (Spanish, no Arabic) at $0.00028/s; voice list not yet read |
+| Text to speech (fallback only) | `/v1/audio/speech` | Not used for Ahmes, whose voice is ElevenLabs. Kept as a fallback if ElevenLabs is down: `auk-flash` (English), `qwen3-tts` (Spanish, no Arabic) at $0.00028/s |
 | Speech to text (stretch) | `/v1/audio/transcriptions`, `whisper-large-v3-turbo` | multipart vs base64 is unverified |
 | Firewall group | 22 from your IP; 80 and 443 open | doc not read |
 | HTTPS | Caddy + `<ip-dashes>.sslip.io` | standard, untested |
@@ -233,11 +234,14 @@ Ahmed has an ElevenLabs Student plan: 131k credits a month. The key is in Keycha
   - one Arabic line (Vultr's `qwen3-tts` has no Arabic);
   - sound effects for the dizzy moment, from the ElevenLabs sound-effects model.
   - None of this involves child data, and a 2–3 minute film costs only a few thousand credits.
-- **Keep Ahmes's live voice on Vultr TTS** (recommended).
-  - The challenge requires Vultr inference for agent calls, so keeping everything at runtime on Vultr makes the "Application of Technology" story clean.
-  - It also avoids sending child-facing text to a second third party.
-  - Pre-rendered lines use the same Vultr voice, so Ahmes always sounds like himself.
-- **Option, if Vultr's voices sound flat in testing:** pre-render Ahmes's fixed lines with ElevenLabs and say so in the README. It's Ahmed's call after the phase 0 TTS smoke test.
+- **Decided (Ahmed): Ahmes's live voice is ElevenLabs.**
+  - **What is sent:** only Ahmes's own reply text, which comes from our templates. The child's words never go to ElevenLabs. Child input reaches only Vultr, for compiling.
+  - **Model:** a low-latency ElevenLabs model, such as Flash, with one voice designed for Ahmes (a friendly robot, not a cartoon child). Check the model ID and latency in the phase 0 smoke test.
+  - **Pre-rendered lines:** the fixed lines ("I got dizzy…", "That word isn't in my brain dictionary") are rendered once at build time and served as files. Live calls are only for lines with numbers in them, and audio is **cached by a hash of the text**.
+  - **Key handling:** the ElevenLabs key stays on the VM, in an environment file outside the repo, readable only by the app user. It never goes into the browser or a sandbox container.
+  - **Fallback:** Vultr `auk-flash` if ElevenLabs is down or over quota. Ahmes then sounds different, and the UI shows a small "backup voice" tag.
+  - **Credits:** a reply is about 100 characters, so 131k credits a month covers well over 1,000 live turns plus the film. Caching stretches that further.
+  - **README:** "LLM calls run on Vultr Serverless Inference. Ahmes's voice is ElevenLabs."
 
 ## 8. Tool workflow
 
@@ -264,7 +268,7 @@ Phases run in order. Effort is a rough estimate only. Ahmed decides when each ru
 
 | Phase | Effort | Work | Gate before the next phase |
 |---|---|---|---|
-| **0. Unlock Vultr** | under 1 h | Ahmed: account, card, `the hackathon promo code`, inference key, `vc2-2c-4gb` VM in Madrid. Authenticated smoke test: chat with JSON schema, plus one TTS call. | Key and VM working |
+| **0. Unlock Vultr** | under 1 h | Ahmed: account, card, `the hackathon promo code`, inference key, `vc2-2c-4gb` VM in Madrid. Authenticated smoke test: chat with JSON schema, plus one ElevenLabs TTS call from the VM with Ahmes's chosen voice. | Key, VM and voice working |
 | **1. Spike** | about 2 h | The literal compiler on good, vague and wrong sentences, "add a zero", and the doubling loop. Run in Docker on the VM. | **G1:** good sentences pass ≥4/5; vague or wrong ones fail ≥4/5; doubling hangs 10/10. If not: `glm-5.3`, then a fix-template fallback. |
 | **2. Core engine** | about 4 h | Per-task sandbox with streamed results and the four kill layers; sweeper, guard, exact checker, fixed-seed tests, `/api/teach`. | **G2:** a text turn end to end on the VM; kill verified; removal checked by ID |
 | **3. Teaching loop** | about 3 h | Echo templates, behaviour read-out, next probe, Quiz, "bad advice" chips. | **G3:** both arcs run 3 times clean, then **feature freeze** |
@@ -300,6 +304,7 @@ Phases run in order. Effort is a rough estimate only. Ahmed decides when each ru
 | The diagnosis bars invented certainty about bugs we planted | A black-box classifier of the *patched* brain, with an "unknown" bucket and match counts |
 | The containment looked staged | A judge-triggered fault fixture with an evidence receipt, removal by ID, and a host-survival witness |
 | `sleep 30` left containers behind, and the timeout killed only the client | `--rm` per task, inner and outer kill, a sweeper, honest OOM classification |
+| **Ahmed (v2.3):** use ElevenLabs for Ahmes's voice | ElevenLabs live TTS gets only the reply text; fixed lines pre-rendered; cached; Vultr TTS as fallback |
 | Scope was several prototypes; the plan was 16.5 h | Text-first English core, 2 skills, a 15 h budget with 1 h contingency, a feature freeze at gate G3 |
 | Host exposure (spike run locally, an ungated red-team route) | The spike runs on the VM in Docker; fixtures only; caps on size, rate and concurrency; hard-coded Docker args |
 | Overclaims ("cured", "first", "teaches coding") | "passed 40 fresh tests"; "learning outcomes untested"; prior art cited |
