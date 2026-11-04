@@ -32,12 +32,12 @@ A second open model, Thoth the teacher (GLM-5.3 on Vultr), watches every lesson:
 
 **Links:**
 - Demo: https://64-177-33-215.sslip.io
-- Repo: https://github.com/DrAhmed7887/vultr-agent-rush (currently PRIVATE; make it public before submitting)
+- Repo: https://github.com/DrAhmed7887/vultr-agent-rush
 - Video: video/out/teach-ahmes-final.mp4, 2:47: a 27 s animated opening (video/opening, HyperFrames), then the 2:21 demo recorded from the live site on 4 Nov (upload where you choose, for example YouTube unlisted). Rebuild it with: `ffmpeg -i video/out/opening.mp4 -i video/out/teach-ahmes-demo.mp4 -filter_complex "[0:v][0:a][1:v][1:a]concat=n=2:v=1:a=1" video/out/teach-ahmes-final.mp4`
 - Slides: video/out/slides.pdf · Cover: video/out/cover.png
 
 **Before submitting (Ahmed):**
 1. Watch the video and check the slides.
-2. Make the GitHub repo public, and merge the branch `spec/teach-ahmes` into `main`.
+2. (Done 4 Nov: the repo is public, with `main` as the default branch.)
 3. Upload the video, then fill in the lablab form with the text above. Deadline: Sun 8 Nov, 22:00 UTC (23:00 CET).
 4. After judging: destroy the Vultr VM (a stopped VM is still billed) and delete the inference subscription.
