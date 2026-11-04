@@ -1,0 +1,180 @@
+/* Kid mode: one screen at a time. The child is the teacher marking Ahmes's homework.
+   The memorable thing: Egyptian cartouches that fill with gold as Ahmes learns each trick. */
+
+.top {
+  max-width: 1120px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 10px 16px; padding: max(14px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 6px max(16px, env(safe-area-inset-left));
+}
+.wordmark { margin: 0; }
+.cartouche-word {
+  position: relative; display: inline-block; font-weight: 800; font-size: 22px; letter-spacing: -.01em; color: var(--lapis);
+  border: 3px solid var(--gold); border-radius: 999px; padding: 4px 22px 4px 16px; background: var(--card);
+}
+.cartouche-word::after { content: ""; position: absolute; right: -9px; top: 6px; bottom: 6px; width: 4px; border-radius: 2px; background: var(--gold); }
+.top .skills .skill { padding: 8px 14px; font-size: 15px; }
+.top-tools { display: flex; gap: 14px; }
+.link { font: 500 15px var(--body); color: var(--lapis); background: none; border: 0; padding: 6px 2px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+
+.kid {
+  max-width: 1120px; margin: 0 auto; display: grid; gap: 18px 28px;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); grid-template-areas: "tricks tricks" "stage panel";
+  padding: 8px max(16px, env(safe-area-inset-right)) 32px max(16px, env(safe-area-inset-left));
+}
+.tricks { grid-area: tricks; display: flex; flex-direction: column; gap: 8px; }
+.tricks-title { margin: 0; font-weight: 600; font-size: 15px; color: var(--muted); }
+.cartouches { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 16px; }
+.cartouche {
+  position: relative; border: 2px dashed var(--line); border-radius: 999px; padding: 6px 22px 6px 16px; background: var(--card);
+  display: flex; flex-direction: column; line-height: 1.2; min-width: 0;
+}
+.cartouche::after { content: ""; position: absolute; right: -8px; top: 9px; bottom: 9px; width: 4px; border-radius: 2px; background: var(--line); }
+.c-name { font-weight: 700; font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }
+.c-ex { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.cartouche.learned { border: 2px solid var(--gold); background: color-mix(in srgb, var(--gold) 22%, var(--card)); }
+.cartouche.learned::after { background: var(--gold); }
+.cartouche.learned .c-name { color: var(--ink); }
+.cartouche.learned .c-name::before { content: "★ "; color: var(--gold); }
+
+.kid .stage { grid-area: stage; display: flex; flex-direction: column; align-items: center; gap: 14px; position: sticky; top: 12px; align-self: start; }
+.kid .robot-wrap { width: min(300px, 100%); }
+.kid .bubble { width: 100%; font-size: 19px; line-height: 1.4; }
+
+.panel {
+  grid-area: panel; background: var(--card); border: 2px solid var(--line); border-radius: 24px; padding: 22px 24px 26px;
+  display: flex; flex-direction: column; gap: 18px; min-height: 440px; min-width: 0;
+}
+.path { list-style: none; margin: 0; padding: 0; display: flex; gap: 6px; counter-reset: step; }
+.path li {
+  counter-increment: step; flex: 1; font-size: 13px; font-weight: 600; color: var(--muted); text-align: center;
+  border-top: 5px solid var(--line); padding-top: 6px; border-radius: 0;
+}
+.path li::before { content: counter(step) ". "; }
+.path li.done { border-top-color: var(--faience); color: var(--faience); }
+.path li.now { border-top-color: var(--lapis); color: var(--lapis); }
+
+.screen { display: flex; flex-direction: column; gap: 16px; }
+.screen[hidden] { display: none; }
+.ask { margin: 0; font-size: clamp(24px, 3.4vw, 32px); font-weight: 700; line-height: 1.15; letter-spacing: -.01em; color: var(--ink); outline: none; }
+.sub { margin: 0; color: var(--muted); font-size: 17px; }
+.say-it { margin: 0; font-size: 19px; line-height: 1.45; }
+
+/* the homework line */
+.problem { background: var(--paper); border: 2px solid var(--line); border-radius: 18px; padding: 16px 12px 20px; text-align: center; }
+.problem .q { margin: 0 0 6px; color: var(--muted); font-weight: 600; font-size: 16px; }
+.nums { margin: 0; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px 14px;
+  font-size: clamp(40px, 8vw, 58px); font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; color: var(--ink); }
+.or { font-size: .45em; font-weight: 600; color: var(--muted); }
+.num { position: relative; padding: 2px 14px; border-radius: 50%; border: 4px solid transparent; }
+.ring-his, .ring-bad { border-color: var(--wrong); transform: rotate(-4deg); }
+.ring-ok { border-color: var(--faience); transform: rotate(-4deg); }
+.ring-his::after, .ring-bad::after, .ring-ok::after {
+  position: absolute; right: -14px; top: -16px; font-size: .5em; font-weight: 800; transform: rotate(4deg);
+}
+.ring-bad::after { content: "✗"; color: var(--wrong); }
+.ring-ok::after { content: "✓"; color: var(--faience); }
+.frac { display: inline-flex; flex-direction: column; align-items: center; line-height: 1; vertical-align: middle; font-size: .78em; }
+.frac span:last-child { border-top: 4px solid currentColor; padding-top: 4px; margin-top: 4px; min-width: 1.2em; text-align: center; }
+
+/* marking his homework, in teacher's pen */
+.marks { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.mark { font: 700 19px var(--body); min-height: 64px; border-radius: 18px; cursor: pointer; background: var(--card); padding: 10px; }
+.mark span { font-size: 26px; margin-right: 4px; }
+.mark.yes { color: var(--faience); border: 3px solid var(--faience); }
+.mark.no { color: var(--wrong); border: 3px solid var(--wrong); }
+.mark:active { transform: translateY(2px); }
+
+.big {
+  font: 700 19px var(--body); min-height: 60px; padding: 12px 22px; border-radius: 18px; cursor: pointer;
+  background: var(--lapis); color: var(--on-lapis); border: 2px solid var(--lapis);
+  box-shadow: 0 5px 0 color-mix(in srgb, var(--lapis) 55%, #000); align-self: stretch;
+}
+.big:active { transform: translateY(4px); box-shadow: 0 1px 0 color-mix(in srgb, var(--lapis) 55%, #000); }
+.quiet { font: 600 17px var(--body); color: var(--lapis); background: none; border: 2px solid var(--line); border-radius: 18px; min-height: 52px; padding: 10px 18px; cursor: pointer; }
+.row { display: flex; flex-direction: column; gap: 10px; }
+
+/* pictures */
+.visual { background: var(--paper); border: 2px solid var(--line); border-radius: 18px; padding: 12px; }
+.visual svg { width: 100%; height: auto; display: block; }
+.zoom { margin: 4px 0 0; text-align: center; font-size: 14px; color: var(--muted); }
+.nl-axis { stroke: var(--ink); stroke-width: 3; stroke-linecap: round; }
+.nl-tick { stroke: var(--ink); stroke-width: 2; }
+.nl-end { fill: var(--muted); font: 600 13px var(--body); }
+.nl-label { font: 800 17px var(--body); fill: var(--ink); }
+.nl-lead { stroke: var(--muted); stroke-width: 1.5; }
+.nl-pt circle { fill: var(--lapis); }
+.nl-true circle { fill: var(--faience); } .nl-true .nl-label { fill: var(--faience); }
+.nl-his circle { fill: var(--wrong); } .nl-his .nl-label { fill: var(--wrong); }
+.fb-cell { stroke: var(--ink); stroke-width: 1.5; }
+.fb-off { fill: var(--card); }
+.fb-on.fb-part { fill: color-mix(in srgb, var(--lapis) 55%, var(--card)); }
+.fb-on.fb-his { fill: var(--wrong); }
+.fb-on.fb-true { fill: var(--faience); }
+.fb-label { font: 700 14px var(--body); fill: var(--ink); }
+.fb-label.fb-his { fill: var(--wrong); } .fb-label.fb-true { fill: var(--faience); }
+
+/* teaching */
+.speak { display: flex; flex-direction: column; gap: 12px; }
+.mic {
+  display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 64px; border-radius: 18px; cursor: pointer;
+  font: 700 19px var(--body); color: var(--ink); background: var(--paper); border: 3px solid var(--wrong);
+}
+.mic-dot { width: 22px; height: 22px; border-radius: 50%; background: var(--wrong); }
+.mic.on { background: color-mix(in srgb, var(--wrong) 12%, var(--card)); }
+.mic.on .mic-dot { animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 50% { transform: scale(1.35); opacity: .6; } }
+.mic[disabled] { opacity: .7; cursor: wait; }
+.kid textarea { font-size: 19px; min-height: 96px; }
+.ideas summary { cursor: pointer; font-weight: 600; color: var(--lapis); font-size: 16px; padding: 4px 0; }
+.ideas .starters { margin-top: 8px; }
+.ideas .starter { font-size: 15px; }
+.hint-err { margin: 0; color: var(--wrong); font-weight: 600; font-size: 15px; }
+.you-said { margin: 0; padding: 10px 14px; border-radius: 14px; background: color-mix(in srgb, var(--new) 30%, var(--card)); font-weight: 600; font-size: 17px; }
+
+.think { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.think li { display: flex; align-items: center; gap: 12px; font-size: 19px; color: var(--muted); }
+.think li::before { content: ""; width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--line); flex: none; }
+.think li.now { color: var(--ink); font-weight: 600; }
+.think li.now::before { border-color: var(--gold) var(--gold) var(--line) var(--line); animation: spin .8s linear infinite; }
+.think li.done { color: var(--faience); }
+.think li.done::before { border-color: var(--faience); background: var(--faience); }
+
+/* quiz cards */
+.cards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.qcard {
+  display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 12px 14px; border-radius: 16px; border: 2px solid var(--line);
+  background: var(--paper); animation: deal .35s ease-out backwards; animation-delay: calc(var(--i) * 450ms);
+}
+@keyframes deal { from { transform: rotateY(90deg); opacity: 0; } }
+.q-trick { grid-column: 1 / -1; font-size: 13px; font-weight: 600; color: var(--muted); }
+.q-prob { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.q-ans { grid-column: 1; font-size: 15px; }
+.q-mark { grid-column: 2; grid-row: 2 / 4; align-self: center; font-size: 30px; font-weight: 800; }
+.qcard.ok { border-color: var(--faience); } .qcard.ok .q-mark { color: var(--faience); }
+.qcard.bad { border-color: var(--wrong); } .qcard.bad .q-mark { color: var(--wrong); }
+
+/* the win */
+.seal {
+  align-self: center; width: 170px; height: 170px; border-radius: 50%; display: grid; place-items: center; text-align: center;
+  font-weight: 800; font-size: 22px; line-height: 1.1; color: var(--ink); padding: 26px;
+  background: var(--gold); border: 6px double var(--card); outline: 4px solid var(--gold); transform: rotate(-8deg);
+  animation: slam2 .3s ease-out;
+}
+@keyframes slam2 { from { transform: rotate(-8deg) scale(1.6); opacity: 0; } }
+
+/* grown-ups view */
+.how { border-top: 2px solid var(--line); background: var(--paper); }
+.how-in { max-width: 1120px; margin: 0 auto; padding: 24px 16px; display: flex; flex-direction: column; gap: 20px; }
+.how-head { display: flex; flex-direction: column; gap: 6px; }
+.how-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+.how .foot { max-width: 1120px; margin: 0 auto; padding: 0 16px 32px; }
+
+@media (max-width: 860px) {
+  .kid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "stage" "panel" "tricks"; gap: 14px; }
+  .kid .stage { position: static; flex-direction: row; align-items: center; }
+  .kid .robot-wrap { width: 118px; flex: none; }
+  .kid .bubble { font-size: 17px; }
+  .cartouches { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .panel { padding: 18px 16px 22px; min-height: 0; border-radius: 20px; }
+  .how-grid { grid-template-columns: minmax(0, 1fr); }
+  .top .cartouche-word { font-size: 19px; }
+}

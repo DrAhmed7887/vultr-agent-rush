@@ -12,7 +12,17 @@ Ahmes is a robot classmate who is sure he's great at maths. He isn't. A child ex
 
 > He's named after Ahmes, the Egyptian scribe who copied the Rhind Papyrus around 1550 BC, a famous early maths text full of fractions. 3,500 years later, his robot descendant still gets them wrong.
 
-## What it does
+## What the child does, one step at a time
+
+1. **Check his homework.** Ahmes answers one problem wrong and says why, in his own words ("0.45! 45 is more than 5"). The child marks it ✓ or ✗ like a teacher.
+2. **See why.** A picture proves it: a number line zoomed to the place where the two decimals differ, or fraction bars showing that his 1/2 + 1/3 = 2/5 is smaller than 1/2 on its own.
+3. **Teach him.** The child talks (Vultr's Nemotron omni model writes the words down) or types the rule.
+4. **He tries again** on the same homework problem, and says back what he understood.
+5. **Quiz.** Brand-new problems, one card per *trick* (kind of problem). The first card he gets wrong becomes his next homework. Gold cartouches show the tricks he has learned; all of them earns the "Teacher of Ahmes" seal.
+
+His reasons are never made up by an AI: for each wrong answer the app finds which known wrong rule produces exactly that answer, and he says that rule. A trick counts as learned only when he gets every problem of that kind right in a sandboxed 40-problem test. The code, the 40-problem grid, the sandbox log and the break-him tests are in **How it works**, for grown-ups and judges.
+
+## What happens underneath
 
 1. **Ahmes starts with a classic misconception.** These are documented in the research:
    - *"0.45 is bigger than 0.5 because it has more digits"* (Steinle & Stacey; about 40% of Year 5 children);
@@ -63,6 +73,8 @@ flowchart LR
 |---|---|---|
 | **Cloud Compute** | The control plane. It runs the web app and orchestrator, decides what runs, where, with which limits and for how long, and proves each container was destroyed. | `vc2-2c-4gb`, Madrid, Docker on Ubuntu 24.04, $20/month |
 | **Serverless Inference** | Every LLM call: the literal compiler that turns a child's words into code. | `qwen3.8-27b` at temperature 0, JSON output, about 1–2 s per call; `glm-5.3` if the main model's call fails |
+| **Serverless Inference (omni)** | Hears the child: a short recording becomes text. Told the child is explaining maths, it wrote "tenths" where Whisper and Qwen ASR heard "temps" and "tents" | `nemotron-3-nano-omni-30b-a3b-reasoning`, about 3 s |
+| **Serverless Inference (safety)** | Screens every sentence before the compiler sees it: personal details and unkind words get a gentle reply and nothing runs | `nemotron-3.5-content-safety`, runs alongside the compiler |
 | **Serverless Inference (TTS)** | Backup voice if ElevenLabs is down | `auk-flash` |
 | Host firewall (ufw) | Only 22, 80 and 443 open | on the VM |
 
@@ -148,7 +160,7 @@ An LLM asked to "fix" fractions will quietly write the right answer whatever the
 ## Run it
 
 ```bash
-uv sync && uv run pytest -q          # 9 tests: guard, classifier, quote check, grading, trap choice
+uv sync && uv run pytest -q          # 10 tests: guard, classifier, quote check, grading, trap choice, tricks
 deploy/deploy.sh                     # rsync to the Vultr VM, build the sandbox image, restart
 ```
 
@@ -170,6 +182,7 @@ This is a learning-by-teaching prototype. **Learning outcomes for children are u
 **Proposed value (not yet validated):** for teachers, Ahmes shows the rule a learner actually *expressed*, which can guide what to practise next. For families, it's homework that flips the roles.
 
 **Privacy:**
+- Recordings are sent to Vultr for transcription and not kept by the app.
 - What a child types is held in the app's memory for at most 24 hours. The app doesn't write it to its database or logs, which hold sandbox receipts only.
 - The run log stores receipts only.
 - The demo uses no real children's data.
@@ -177,9 +190,9 @@ This is a learning-by-teaching prototype. **Learning outcomes for children are u
 ## Repo map
 
 ```
-app/        main.py (API) · compiler.py · guard.py · sandbox.py · skills.py · classifier.py · replies.py · voice.py · fixtures.py
+app/        main.py (API) · compiler.py · guard.py · sandbox.py · skills.py · classifier.py · replies.py · voice.py · listen.py · fixtures.py
 sandbox/    Dockerfile · runner.py        (what runs inside the throwaway container)
-web/        index.html · style.css · app.js · manifest.webmanifest
+web/        index.html · app.js (the child's steps) · visuals.js (number line, fraction bars) · how.js (grown-ups view) · style.css · kid.css
 spike/      spike.py + results            (gate G1)
 deploy/     ahmes.service · Caddyfile · deploy.sh
 docs/       SPEC.md                       (the design, reviewed by GPT-6 Astra, Claude Opus and Gemini 4)

@@ -17,12 +17,14 @@ from collections import deque
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import classifier, compiler, fixtures, guard, replies, sandbox, voice
-from .skills import SKILLS
+from . import classifier, compiler, fixtures, guard, listen, replies, sandbox, voice
+from .skills import HOMEWORK, KIND, SKILLS, TRICKS, valid_problem
+from .skills import tricks as trick_table
 
 ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = Path("/var/lib/ahmes/runs.db") if Path("/var/lib/ahmes").exists() else ROOT / "runs.db"
@@ -69,7 +71,7 @@ def _session(sid: str) -> dict:
         return s
 
 
-GLOBAL_PER_MIN = {"teach": 120, "quiz": 120, "chip": 60, "beyond": 60, "session": 300, "read": 600}
+GLOBAL_PER_MIN = {"teach": 120, "quiz": 120, "chip": 60, "beyond": 60, "session": 300, "read": 600, "listen": 120}
 
 
 def _limit(request: Request, per_min: int = 20, bucket: str = "teach") -> None:
@@ -98,6 +100,7 @@ class Teach(BaseModel):
     sid: str = Field(max_length=40)
     skill: str = Field(max_length=40)
     sentence: str = Field(max_length=MAX_SENTENCE)
+    homework: list[int] | None = Field(default=None, max_length=6)   # the problem he retries
 
 
 class SkillReq(BaseModel):
@@ -124,15 +127,43 @@ def _grade(sk, probs, run) -> dict:
         status = c["status"] if c else ("dizzy" if run.verdict == "TIMEOUT" else "too_full" if run.verdict == "OOM" else "not_run")
         ok = bool(c) and status == "ok" and sk.grade(p, c["out"])
         right += ok
-        rows.append({"problem": sk.show(p), "answer": sk.show_answer(p, c["out"]) if c and status == "ok" else status,
+        rows.append({"args": list(p), "problem": sk.show(p), "answer": sk.show_answer(p, c["out"]) if c and status == "ok" else status,
                      "ok": ok, "status": status})
     return {"right": right, "total": len(probs), "rows": rows}
 
 
-def _check(sk, code: str, seed: int, purpose: str) -> tuple[dict, sandbox.RunResult, list]:
+def _check(sk, code: str, seed: int, purpose: str, extra: list | None = None) -> tuple[dict, sandbox.RunResult, list]:
+    """Run the 40-problem test in one container. `extra` problems (the homework) ride along in
+    the same container after the 40 and are not part of the score."""
     probs = sk.problems(seed, 40)
-    run = sandbox.run(code, [list(p) for p in probs], purpose)
+    run = sandbox.run(code, [list(p) for p in probs] + [list(e) for e in (extra or [])], purpose)
     return _grade(sk, probs, run), run, probs
+
+
+def _card(sk, args, case: dict | None, prefer: str = "") -> dict:
+    """One problem as the child sees it: his answer, right or wrong, and his own reason."""
+    out = case.get("out") if case and case.get("status") == "ok" else None
+    status = case.get("status") if case else "not_run"
+    why = replies.explain(sk.name, args, out, prefer) if out is not None else \
+        replies.FIXED["dizzy"] if status == "dizzy" else "Hmm, I didn't get an answer for that one."
+    return {"args": list(args), "kind": KIND[sk.name](args), "problem": sk.show(args),
+            "his_answer": sk.show_answer(args, out) if out is not None else status,
+            "out": out, "ok": out is not None and sk.grade(args, out), "why": why}
+
+
+_start: dict[str, dict] = {}
+
+
+def _start_state(sk) -> dict:
+    """His starting brain on the 40-problem test plus the first homework, run once in the sandbox."""
+    if sk.name not in _start:
+        hw = HOMEWORK[sk.name]
+        grade, run, probs = _check(sk, sk.start_code, TEACH_SEED, "start", [hw])
+        _log_run("start", run)
+        by_i = {c.get("i"): c for c in run.cases}
+        card = _card(sk, hw, by_i.get(40), "")
+        _start[sk.name] = {"homework": card, "tricks": trick_table(sk.name, probs, [r["ok"] for r in grade["rows"]])}
+    return _start[sk.name]
 
 
 def _read_out(sk, run: sandbox.RunResult, probs: list) -> dict:
@@ -160,9 +191,13 @@ def new_session(request: Request) -> dict:
     with _lock:
         _sessions[sid] = {"created": time.time(), "seed": TEACH_SEED,
                           "brains": {k: s.start_code for k, s in SKILLS.items()}, "history": {k: [] for k in SKILLS}}
-    return {"sid": sid, "skills": {k: {"title": s.title, "code": s.start_code,
-                                       "welcome": replies.FIXED[f"welcome_{k}"],
-                                       "voice": voice.speak(replies.FIXED[f"welcome_{k}"])} for k, s in SKILLS.items()}}
+    out = {}
+    for k, sk in SKILLS.items():
+        st = _start_state(sk)
+        hw = dict(st["homework"], voice=voice.speak(st["homework"]["why"]))
+        out[k] = {"title": sk.title, "code": sk.start_code, "welcome": replies.FIXED[f"welcome_{k}"],
+                  "voice": voice.speak(replies.FIXED[f"welcome_{k}"]), "homework": hw, "tricks": st["tricks"]}
+    return {"sid": sid, "skills": out}
 
 
 @app.post("/api/teach")
@@ -179,8 +214,17 @@ def teach(t: Teach, request: Request) -> dict:
     def mark(stage: str, **kw):
         timeline.append({"stage": stage, "ms": int((time.monotonic() - t0) * 1000), **kw})
 
+    hw = tuple(t.homework) if t.homework else None
+    if hw is not None and not valid_problem(sk.name, hw):
+        raise HTTPException(400, "Bad homework problem")
+    safety = _pool.submit(listen.safe, sentence)
     comp = compiler.compile_sentence(current, sentence)
     mark("compile", model=comp.model, ok=comp.ok, tokens=comp.usage.get("total_tokens"))
+    verdict = safety.result(timeout=15)
+    mark("safety", verdict=verdict)
+    if verdict == "unsafe":   # personal details or unkind words: nothing is compiled or run
+        line = replies.FIXED["unkind"]
+        return {"outcome": "unkind", "say": line, "voice": voice.speak(line), "timeline": timeline, "code": current}
     if comp.no_rule:
         line = replies.FIXED["no_rule"]
         return {"outcome": "no_rule", "say": line, "voice": voice.speak(line), "timeline": timeline, "code": current}
@@ -195,10 +239,10 @@ def teach(t: Teach, request: Request) -> dict:
         return {"outcome": "blocked", "say": line, "voice": voice.speak(line), "reason": g.reason,
                 "steps": comp.steps, "proposed": comp.code, "timeline": timeline, "code": current}
 
-    grade, run, probs = _check(sk, comp.code, s["seed"], "teach")
+    grade, run, probs = _check(sk, comp.code, s["seed"], "teach", [hw] if hw else None)
     run_id = _log_run("teach", run)
     mark("sandbox", verdict=run.verdict, elapsed_ms=run.elapsed_ms, run_id=run_id)
-    statuses = {c.get("status") for c in run.cases}
+    statuses = {c.get("status") for c in run.cases if c.get("i", 0) < 40}
     if run.verdict == "TIMEOUT" or "dizzy" in statuses:
         outcome = "timeout"
     elif run.verdict == "OOM" or "too_full" in statuses:
@@ -222,9 +266,14 @@ def teach(t: Teach, request: Request) -> dict:
     trap = cls.get("trap")
     line = replies.score_line(grade["right"], grade["total"]) + " " + replies.echo(
         sk.name, cls["behaves_like"], trap["args"] if trap else None, trap["out"] if trap else None)
+    by_i = {c.get("i"): c for c in run.cases}
+    retry = _card(sk, hw, by_i.get(40), cls["behaves_like"]) if hw else None
+    if retry:
+        retry["voice"] = voice.speak(retry["why"])
     mark("reply")
     return {"outcome": "cured" if grade["right"] == grade["total"] else "partial", "say": line, "voice": voice.speak(line),
             "steps": comp.steps, "code": comp.code, "previous": current, "grade": grade, "read_out": cls,
+            "retry": retry, "tricks": trick_table(sk.name, probs, [r["ok"] for r in grade["rows"]]),
             "run": {"id": run_id, **run.receipt, "verdict": run.verdict}, "timeline": timeline}
 
 
@@ -232,9 +281,39 @@ def teach(t: Teach, request: Request) -> dict:
 def quiz(q: SkillReq, request: Request) -> dict:
     _limit(request, 20, "quiz")
     s, sk = _session(q.sid), _skill(q.skill)
-    grade, run, _ = _check(sk, s["brains"][sk.name], random.randrange(10 ** 6), "quiz")
+    grade, run, probs = _check(sk, s["brains"][sk.name], random.randrange(10 ** 6), "quiz")
     run_id = _log_run("quiz", run)
-    return {"grade": grade, "run": {"id": run_id, **run.receipt, "verdict": run.verdict}}
+    by_i = {c.get("i"): c for c in run.cases}
+    prefer = _read_out(sk, run, probs)["behaves_like"]   # so each card's reason matches his overall rule
+    cards = []
+    for key, name, _ in TRICKS[sk.name]:   # one card per trick: the first he got wrong, else the first of that kind
+        idx = [i for i, p in enumerate(probs) if KIND[sk.name](p) == key]
+        if not idx:
+            continue
+        pick = next((i for i in idx if not grade["rows"][i]["ok"]), idx[0])
+        card = _card(sk, probs[pick], by_i.get(pick), prefer)
+        cards.append({**card, "trick": key, "trick_name": name})
+    nxt = next((c for c in cards if not c["ok"]), None)
+    if nxt:
+        nxt["voice"] = voice.speak(nxt["why"])
+    return {"grade": grade, "cards": cards, "next_homework": nxt,
+            "tricks": trick_table(sk.name, probs, [r["ok"] for r in grade["rows"]]),
+            "run": {"id": run_id, **run.receipt, "verdict": run.verdict}}
+
+
+@app.post("/api/listen")
+async def listen_to_child(request: Request, sid: str = "") -> dict:
+    """The child's recording -> text, by Vultr's omni model. The audio isn't stored."""
+    _limit(request, 20, "listen")
+    _session(sid[:40])
+    wav = await request.body()
+    try:
+        text = await run_in_threadpool(listen.hear, wav)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from None
+    except Exception:  # noqa: BLE001
+        raise HTTPException(503, "Ahmes can't hear right now. Type it instead.") from None
+    return {"text": text}
 
 
 @app.post("/api/reset")

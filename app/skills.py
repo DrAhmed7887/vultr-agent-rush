@@ -154,3 +154,67 @@ SKILLS: dict[str, Skill] = {
     "add_fractions": Skill("add_fractions", "Adding fractions", FRAC_ARGS, AHMES_FRACTIONS,
                            frac_problems, _grade_frac, _show_frac, _ans_frac),
 }
+
+
+# ---------- tricks: the kinds of problem a child can see Ahmes learn, one at a time ----------
+
+def dec_kind(a: Sequence[int]) -> str:
+    w1, d1, p1, w2, d2, p2 = a
+    if dec_value(w1, d1, p1) == dec_value(w2, d2, p2):
+        return "equal"
+    if p1 == p2:
+        return "same_length"
+    if w1 == w2 and (d1 // 10 ** (p1 - 1)) == (d2 // 10 ** (p2 - 1)):
+        return "same_tenths"
+    return "tenths_differ"
+
+
+def frac_kind(a: Sequence[int]) -> str:
+    _, b1, _, b2 = a
+    if b1 == b2:
+        return "same_bottom"
+    if b1 % b2 == 0 or b2 % b1 == 0:
+        return "fits"
+    return "different"
+
+
+TRICKS = {
+    "compare_decimals": [
+        ("same_length", "Same length", "0.3 or 0.7"),
+        ("tenths_differ", "Tenths first", "0.45 or 0.5"),
+        ("same_tenths", "Same tenths? Look next door", "0.61 or 0.606"),
+        ("equal", "Same number, longer look", "0.3 or 0.30"),
+    ],
+    "add_fractions": [
+        ("same_bottom", "Same bottoms", "1/5 + 2/5"),
+        ("fits", "One bottom fits in the other", "1/2 + 1/4"),
+        ("different", "Different bottoms", "1/2 + 1/3"),
+    ],
+}
+KIND = {"compare_decimals": dec_kind, "add_fractions": frac_kind}
+HOMEWORK = {"compare_decimals": (0, 45, 2, 0, 5, 1), "add_fractions": (1, 2, 1, 3)}
+
+
+def valid_problem(skill: str, a: Sequence[int]) -> bool:
+    """A problem the child's screen sends back must be small, well-formed integers."""
+    if not all(isinstance(x, int) and not isinstance(x, bool) for x in a):
+        return False
+    if skill == "compare_decimals":
+        if len(a) != 6:
+            return False
+        return all(0 <= a[i] <= 9 and 1 <= a[i + 2] <= 3 and 0 <= a[i + 1] < 10 ** a[i + 2] for i in (0, 3))
+    if skill == "add_fractions":
+        return len(a) == 4 and all(0 <= a[i] <= 20 and 1 <= a[i + 1] <= 20 for i in (0, 2))
+    return False
+
+
+def tricks(skill: str, probs: Sequence[Sequence[int]], oks: Sequence[bool]) -> list[dict]:
+    """Per trick: how many of that kind he got right in this test. Learned = every one right."""
+    kind = KIND[skill]
+    out = []
+    for key, name, example in TRICKS[skill]:
+        idx = [i for i, p in enumerate(probs) if kind(p) == key]
+        right = sum(1 for i in idx if oks[i])
+        out.append({"key": key, "name": name, "example": example, "right": right, "total": len(idx),
+                    "learned": bool(idx) and right == len(idx)})
+    return out

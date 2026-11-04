@@ -95,3 +95,19 @@ def test_trap_is_always_a_problem_he_got_wrong():
     cls = main._read_out(sk, run, probs)
     assert cls["trap"] is not None
     assert not sk.grade(tuple(cls["trap"]["args"]), cls["trap"]["out"])
+
+
+def test_tricks_and_his_reasons():
+    from app.replies import explain
+    from app.skills import KIND, SKILLS, tricks, valid_problem
+    sk = SKILLS["compare_decimals"]
+    probs = sk.problems(11, 40)
+    t = tricks(sk.name, probs, [True] * 40)
+    assert [x["learned"] for x in t] == [True] * 4 and sum(x["total"] for x in t) == 40
+    assert KIND[sk.name]((0, 3, 1, 0, 30, 2)) == "equal"
+    # his reason describes what his rule did on this exact problem
+    assert explain(sk.name, (0, 45, 2, 0, 5, 1), 1) == "0.45! 45 is more than 5, so it's bigger."
+    assert "tenths are the same" in explain(sk.name, (0, 606, 3, 0, 61, 2), 1, prefer="tenths_only")
+    assert explain("add_fractions", (1, 2, 1, 3), [2, 5]).startswith("I add the tops and add the bottoms")
+    assert valid_problem(sk.name, (0, 45, 2, 0, 5, 1)) and not valid_problem(sk.name, (0, 450, 2, 0, 5, 1))
+    assert not valid_problem("add_fractions", (1, 0, 1, 3))

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Teach Ahmes</title>
-<meta name="description" content="Ahmes is a robot who thinks he's great at maths. Teach him in your own words and watch your words become his code, tested safely in a sandbox on Vultr.">
+<meta name="description" content="Ahmes is a robot who thinks he's great at maths. Check his homework, teach him the rule in your own words, and watch him learn, tested safely in a sandbox on Vultr.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#2449A8">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -12,20 +12,28 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="kid.css">
 </head>
 <body>
-<main class="page">
-  <header class="masthead">
-    <h1>Teach Ahmes</h1>
-    <p class="lede">Ahmes is a robot who thinks he's great at maths. He isn't. Explain the rule in your own words, and watch your words become his code.</p>
-    <div class="skills" role="tablist" aria-label="What Ahmes is learning">
-      <button class="skill" role="tab" id="tab-compare_decimals" data-skill="compare_decimals" aria-selected="true">Which decimal is bigger?</button>
-      <button class="skill" role="tab" id="tab-add_fractions" data-skill="add_fractions" aria-selected="false">Adding fractions</button>
-    </div>
-  </header>
+<header class="top">
+  <p class="wordmark"><span class="cartouche-word">Teach Ahmes</span></p>
+  <div class="skills" role="tablist" aria-label="What Ahmes is learning">
+    <button class="skill" role="tab" data-skill="compare_decimals" aria-selected="true">Decimals</button>
+    <button class="skill" role="tab" data-skill="add_fractions" aria-selected="false">Fractions</button>
+  </div>
+  <div class="top-tools">
+    <button class="link" id="sound" type="button" aria-pressed="true">Voice on</button>
+    <button class="link" id="how-btn" type="button" aria-expanded="false" aria-controls="how">How it works</button>
+  </div>
+</header>
+
+<main class="kid" id="kid">
+  <section class="tricks" aria-label="Tricks Ahmes knows">
+    <p class="tricks-title" id="tricks-title">Tricks Ahmes knows</p>
+    <ol class="cartouches" id="cartouches"></ol>
+  </section>
 
   <section class="stage" aria-label="Ahmes">
-   <div class="stage-in">
     <div class="robot-wrap">
       <svg id="ahmes" class="ahmes" viewBox="0 0 240 280" role="img" aria-label="Ahmes the robot">
         <defs>
@@ -65,45 +73,110 @@
       </svg>
       <div class="stamp" id="stamp" hidden>Stopped by the sandbox<br><span id="stamp-time">3.0 s</span></div>
     </div>
+    <p class="bubble" id="bubble" aria-live="polite">Hi, I'm Ahmes!</p>
+  </section>
 
-    <div class="talk">
-      <p class="bubble" id="bubble" aria-live="polite">Hi, I'm Ahmes!</p>
-      <button class="sound" id="sound" type="button" aria-pressed="true" title="Ahmes's voice on or off">Voice on</button>
-      <p class="status" id="status" aria-live="polite"></p>
+  <section class="panel" aria-live="polite">
+    <ol class="path" id="path" aria-label="Steps">
+      <li data-step="check">Check</li><li data-step="teach">Teach</li><li data-step="retry">Try again</li><li data-step="quiz">Quiz</li>
+    </ol>
+
+    <div class="screen" id="s-check">
+      <h1 class="ask">Ahmes did his homework. Is he right?</h1>
+      <div class="problem" id="check-problem"></div>
+      <div class="marks">
+        <button class="mark yes" id="mark-yes" type="button"><span aria-hidden="true">✓</span> He's right</button>
+        <button class="mark no" id="mark-no" type="button"><span aria-hidden="true">✗</span> He's wrong</button>
+      </div>
     </div>
-   </div>
-  </section>
 
-  <section class="teach card" aria-label="Teach Ahmes">
-    <label for="sentence" class="h2">Tell Ahmes the rule</label>
-    <textarea id="sentence" rows="3" maxlength="500" placeholder="Look at the tenths first…"></textarea>
-    <div class="starters" id="starters" aria-label="Ideas to try"></div>
-    <div class="actions">
-      <button class="primary" id="teach" type="button">Teach Ahmes</button>
-      <button class="secondary" id="quiz" type="button">Quiz Ahmes</button>
-      <button class="ghost" id="reset" type="button">Start him over</button>
+    <div class="screen" id="s-proof" hidden>
+      <h1 class="ask" id="proof-title">Let's look</h1>
+      <div class="visual" id="proof-visual"></div>
+      <p class="say-it" id="proof-text"></p>
+      <button class="big" id="go-teach" type="button">Teach him the rule</button>
+    </div>
+
+    <div class="screen" id="s-teach" hidden>
+      <h1 class="ask" id="teach-title">How should Ahmes do it?</h1>
+      <p class="sub" id="teach-sub">Tell him a rule that works every time, not just this answer.</p>
+      <div class="speak">
+        <button class="mic" id="mic" type="button" aria-pressed="false"><span class="mic-dot" aria-hidden="true"></span><span id="mic-label">Tap to talk</span></button>
+        <textarea id="sentence" rows="3" maxlength="500" placeholder="Or type it here"></textarea>
+      </div>
+      <details class="ideas"><summary>Need an idea?</summary><div class="starters" id="starters"></div></details>
+      <p class="hint-err" id="teach-err" hidden></p>
+      <button class="big" id="teach" type="button">Teach Ahmes</button>
+    </div>
+
+    <div class="screen" id="s-think" hidden>
+      <h1 class="ask">Ahmes is thinking…</h1>
+      <ol class="think" id="think">
+        <li data-t="listen">Reading your words</li>
+        <li data-t="code">Turning them into his robot code</li>
+        <li data-t="box">Trying it in a safe box</li>
+      </ol>
+    </div>
+
+    <div class="screen" id="s-retry" hidden>
+      <p class="you-said" id="you-said"></p>
+      <h1 class="ask" id="retry-title">He tries his homework again</h1>
+      <div class="problem" id="retry-problem"></div>
+      <p class="say-it" id="retry-text"></p>
+      <div class="row">
+        <button class="big" id="retry-next" type="button">Quiz him</button>
+        <button class="quiet" id="retry-why" type="button" hidden>Show me why</button>
+      </div>
+    </div>
+
+    <div class="screen" id="s-oops" hidden>
+      <h1 class="ask" id="oops-title">Whoa!</h1>
+      <p class="say-it" id="oops-text"></p>
+      <p class="sub" id="oops-sub"></p>
+      <button class="big" id="oops-again" type="button">Try saying it another way</button>
+    </div>
+
+    <div class="screen" id="s-quiz" hidden>
+      <h1 class="ask">Quiz time: brand-new problems</h1>
+      <ol class="cards" id="cards"></ol>
+      <p class="say-it" id="quiz-text"></p>
+      <button class="big" id="quiz-next" type="button" hidden>Make it his homework</button>
+    </div>
+
+    <div class="screen" id="s-win" hidden>
+      <div class="seal" aria-hidden="true">Teacher of Ahmes</div>
+      <h1 class="ask" id="win-title">You taught Ahmes every trick!</h1>
+      <p class="sub" id="win-sub"></p>
+      <div class="row">
+        <button class="big" id="win-next" type="button">Teach him fractions</button>
+        <button class="quiet" id="win-reset" type="button">Start him over</button>
+      </div>
     </div>
   </section>
+</main>
 
-  <section class="sheet card" aria-label="Ahmes's test">
-    <div class="sheet-head">
-      <h2 class="h2">Ahmes's test</h2>
-      <p class="score" id="score">Not tested yet</p>
+<section class="how" id="how" hidden aria-label="How it works">
+  <div class="how-in">
+    <div class="how-head">
+      <h2 class="h2">How it works</h2>
+      <p class="hint">For grown-ups and judges. Your words go to Vultr Serverless Inference, which writes Ahmes's new code. The code runs in a brand-new container on a Vultr server in Madrid: no internet, no secrets, 64 MB of memory, 3 seconds at most. Plain arithmetic grades 40 problems, never AI. Then the container is destroyed.</p>
     </div>
-    <p class="hint">40 problems, checked by plain arithmetic, never by AI. Tap a square to see what he answered.</p>
-    <div class="grid" id="grid" role="list"></div>
-    <p class="detail" id="detail"></p>
-    <p class="readout" id="readout" hidden></p>
-  </section>
-
-  <section class="brain card" aria-label="Your words and Ahmes's code">
-    <h2 class="h2">Your words → his code</h2>
-    <p class="said" id="said">Teach him something and your words will appear here, linked to the code they became.</p>
-    <ol class="steps" id="steps"></ol>
-    <pre class="code" id="code" aria-label="Ahmes's code"></pre>
-  </section>
-
-  <section class="hood" aria-label="Under the hood">
+    <div class="how-grid">
+      <section class="sheet card" aria-label="Ahmes's 40-problem test">
+        <div class="sheet-head"><h3>His 40-problem test</h3><p class="score" id="score">Not tested yet</p></div>
+        <div class="grid" id="grid" role="list"></div>
+        <p class="detail" id="detail"></p>
+        <p class="readout" id="readout" hidden></p>
+      </section>
+      <section class="brain card" aria-label="Your words and Ahmes's code">
+        <h3>Your words → his code</h3>
+        <p class="said" id="said">Teach him something and your words will appear here, linked to the code they became.</p>
+        <ol class="steps" id="steps"></ol>
+        <pre class="code" id="code" aria-label="Ahmes's code"></pre>
+        <p class="status" id="status"></p>
+      </section>
+    </div>
+    <section class="hood" aria-label="Under the hood">
     <div class="hood-head">
       <h2 class="h2">Under the hood: how Vultr keeps Ahmes safe</h2>
       <p class="hint">Every time Ahmes learns, his new code runs in a brand-new container on a Vultr server in Madrid: no internet, no secrets, 64 MB of memory, 3 seconds at most. Then the container is destroyed.</p>
@@ -126,12 +199,14 @@
       </div>
     </div>
   </section>
-
+  </div>
   <footer class="foot">
     <p>Named after Ahmes, the scribe who copied the Rhind Papyrus around 1550 BC, a famous early maths text full of fractions. 3,500 years later, his robot descendant still gets them wrong.</p>
-    <p>Every AI call runs on Vultr Serverless Inference (qwen3.8-27b). Ahmes's voice is ElevenLabs, and it only ever reads his own lines. What you type is held in memory for 24 hours at most and isn't saved to our database; please don't type personal details. A prototype; learning outcomes are untested.</p>
+    <p>Every AI call runs on Vultr Serverless Inference: qwen3.8-27b writes the code, Nemotron omni hears the child, Nemotron safety checks the words. Ahmes's voice is ElevenLabs, and it only ever reads his own lines. What you say or type is held in memory for 24 hours at most and isn't saved; recordings aren't kept. Please don't share personal details. A prototype; learning outcomes are untested.</p>
   </footer>
-</main>
+</section>
+<script src="visuals.js"></script>
+<script src="how.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

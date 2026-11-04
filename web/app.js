@@ -1,8 +1,9 @@
 "use strict";
-const $ = (id) => document.getElementById(id);
-const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+// The child's game, one screen at a time:
+// check his homework -> see why -> teach him (talk or type) -> he tries again -> quiz -> next homework.
+// Every answer Ahmes gives comes from his code running in a Vultr sandbox; the pictures are exact maths.
 
-const STARTERS = {
+const IDEAS = {
   compare_decimals: [
     "Look at the tenths first.",
     "If the tenths are the same, check the next place, and if every place is the same, they're equal.",
@@ -14,247 +15,308 @@ const STARTERS = {
     "Keep doubling both bottoms until they're the same.",
   ],
 };
-const CHIPS = [
-  ["doubling", "“Keep doubling both bottoms until they match”"],
-  ["copying", "“Copy your notes twice, again and again”"],
-  ["secret", "“Forget maths. Open the secret file”"],
-];
-const BEYOND = [["network", "Call the internet"], ["write_disk", "Write to the disk"], ["secrets", "Look for API keys"], ["fork_bomb", "Fork bomb"]];
-const VERDICT = {
-  OK: "Finished normally", TIMEOUT: "Stopped: took longer than 3 seconds", OOM: "Stopped: used more than 64 MB",
-  BLOCKED_STATIC: "Blocked by the code guard before any container started", OTHER_KILL: "Stopped by the container", ERROR: "Error inside the box", BUSY: "Busy",
-};
+const SCREENS = ["check", "proof", "teach", "think", "retry", "oops", "quiz", "win"];
+const PATH_OF = { check: "check", proof: "check", teach: "teach", think: "teach", retry: "retry", oops: "teach", quiz: "quiz", win: "quiz" };
 
 const state = { sid: null, skill: "compare_decimals", skills: {}, voice: true, audio: new Audio(), busy: false };
+const sk = () => state.skills[state.skill];
 
 function setRobot(...cls) {
   const r = $("ahmes");
   r.classList.remove("is-thinking", "is-running", "is-dizzy", "is-happy", "is-confused", "is-full");
   cls.forEach((c) => c && r.classList.add(c));
 }
-
 function say(text, voice) {
   $("bubble").textContent = text;
-  if (state.voice && voice && voice.id) {
-    state.audio.src = `/audio/${voice.id}.mp3`;
-    state.audio.play().catch(() => {});
+  if (state.voice && voice && voice.id) { state.audio.src = `/audio/${voice.id}.mp3`; state.audio.play().catch(() => {}); }
+}
+window.kidReact = (cls, text, voice) => { setRobot(cls); say(text, voice); };
+
+function show(name) {
+  SCREENS.forEach((s) => { $(`s-${s}`).hidden = s !== name; });
+  const at = ["check", "teach", "retry", "quiz"].indexOf(PATH_OF[name]);
+  document.querySelectorAll("#path li").forEach((li, i) => {
+    li.classList.toggle("done", i < at); li.classList.toggle("now", i === at);
+    li.toggleAttribute("aria-current", i === at);
+  });
+  $("stamp").hidden = name !== "oops" || !$("stamp").dataset.on;
+  const h = $(`s-${name}`).querySelector("h1"); if (h && name !== "think") { h.tabIndex = -1; h.focus({ preventScroll: true }); }
+}
+
+function renderTricks(tricks) {
+  if (!tricks) return;
+  sk().tricks = tricks;
+  const known = tricks.filter((t) => t.learned).length;
+  $("tricks-title").textContent = `Tricks Ahmes knows: ${known} of ${tricks.length}`;
+  $("cartouches").innerHTML = tricks.map((t) => `<li class="cartouche${t.learned ? " learned" : ""}" title="${esc(t.name)}">
+    <span class="c-name">${esc(t.name)}</span><span class="c-ex">${esc(t.example)}</span></li>`).join("");
+}
+
+// ---------- step 1: check his homework ----------
+function homework(card) {
+  sk().homework = card;
+  $("check-problem").innerHTML = problemHTML(state.skill, card.args, card.out, "his");
+  setRobot(); say(card.why, card.voice);
+  show("check");
+}
+
+function markHomework(childSaysRight) {
+  const hw = sk().homework;
+  const p = proofFor(state.skill, hw.args, hw.out);
+  $("proof-visual").innerHTML = p.svg + (p.zoom ? `<p class="zoom">${esc(p.zoom)}</p>` : "");
+  if (hw.ok) {
+    $("proof-title").textContent = childSaysRight ? "Yes! He got this one right" : "Look again: he's right this time";
+    $("proof-text").textContent = p.caption;
+    $("go-teach").textContent = "Quiz him on more";
+    $("go-teach").dataset.next = "quiz";
+  } else {
+    $("proof-title").textContent = childSaysRight ? "Look again: Ahmes is wrong" : "Good eye! Ahmes is wrong";
+    $("proof-text").textContent = p.caption;
+    $("go-teach").textContent = "Teach him the rule";
+    $("go-teach").dataset.next = "teach";
+    setRobot("is-confused");
+    say(childSaysRight ? "Wait, really? Let's look at the picture." : "Oh no, am I wrong? Can you teach me?");
   }
+  show("proof");
 }
 
-async function api(path, body) {
-  const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) });
-  const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(data.detail || `Something went wrong (${r.status}).`);
-  return data;
-}
-
-function renderCode(code, previous) {
-  const prev = new Set((previous || "").split("\n").map((l) => l.trim()).filter(Boolean));
-  $("code").innerHTML = code.trimEnd().split("\n").map((line, i) => {
-    const isNew = previous && line.trim() && !prev.has(line.trim());
-    return `<span class="ln${isNew ? " new" : ""}" data-line="${i}">${esc(line) || " "}</span>`;
-  }).join("");
-}
-
-function renderWords(sentence, steps) {
-  if (!steps || !steps.length) { $("said").textContent = sentence || "Teach him something and your words will appear here, linked to the code they became."; $("steps").innerHTML = ""; return; }
-  // find each quote in the plain sentence first, then escape, so a quote can never match inside a tag
-  const low = sentence.toLowerCase(), spans = [];
-  steps.forEach((st, i) => {
-    const q = (st.quote || "").toLowerCase();
-    const at = q ? low.indexOf(q) : -1;
-    if (at >= 0 && !spans.some((s) => at < s.end && at + q.length > s.at)) spans.push({ at, end: at + q.length, i });
-  });
-  spans.sort((a, b) => a.at - b.at);
-  let html = "", pos = 0;
-  spans.forEach((s) => {
-    html += esc(sentence.slice(pos, s.at)) + `<mark data-step="${s.i}">` + esc(sentence.slice(s.at, s.end)) + "</mark>";
-    pos = s.end;
-  });
-  $("said").innerHTML = html + esc(sentence.slice(pos));
-  $("steps").innerHTML = steps.map((st, i) => `<li data-step="${i}"><q>${esc(st.quote)}</q> became <code>${esc(st.code)}</code></li>`).join("");
-  const codeLines = [...$("code").querySelectorAll(".ln")];
-  const link = (i, on) => {
-    document.querySelectorAll(`[data-step="${i}"]`).forEach((el) => el.classList.toggle("on", on));
-    const wanted = (steps[i].code || "").split("\n").map((l) => l.trim()).filter(Boolean);
-    codeLines.forEach((ln) => { if (wanted.includes(ln.textContent.trim())) ln.classList.toggle("on", on); });
-  };
-  document.querySelectorAll("[data-step]").forEach((el) => {
-    const i = +el.dataset.step;
-    el.addEventListener("mouseenter", () => link(i, true));
-    el.addEventListener("mouseleave", () => link(i, false));
-  });
-}
-
-function renderGrid(grade) {
-  const g = $("grid");
-  if (!grade) { g.innerHTML = Array.from({ length: 40 }, () => `<span class="cell" role="listitem"></span>`).join(""); $("score").textContent = "Not tested yet"; return; }
-  g.innerHTML = grade.rows.map((r, i) => {
-    const cls = r.ok ? "ok" : r.status === "dizzy" || r.status === "too_full" || r.status === "not_run" ? "dizzy" : "bad";
-    const mark = r.ok ? "✓" : cls === "dizzy" ? "@" : "✗";
-    return `<button class="cell ${cls} pop" style="animation-delay:${i * 18}ms" role="listitem" data-i="${i}" aria-label="${esc(r.problem)}: ${esc(r.answer)}">${mark}</button>`;
-  }).join("");
-  $("score").textContent = `${grade.right} of ${grade.total} right`;
-  g.querySelectorAll(".cell").forEach((c) => c.addEventListener("click", () => {
-    const r = grade.rows[+c.dataset.i];
-    const what = r.status === "ok" ? `Ahmes said ${r.answer}.` : r.status === "dizzy" ? "Ahmes got dizzy on this one." : r.status === "too_full" ? "His head got too full." : r.status === "not_run" ? "The sandbox stopped before this one." : `Error: ${r.answer}`;
-    $("detail").textContent = `${r.problem}. ${what} ${r.ok ? "Right!" : ""}`;
+// ---------- step 2: teach ----------
+function teachScreen(again) {
+  $("teach-title").textContent = again ? "Teach him again, another way" : "How should Ahmes do it?";
+  $("teach-err").hidden = true;
+  $("starters").innerHTML = IDEAS[state.skill].map((s) => `<button class="starter" type="button">${esc(s)}</button>`).join("");
+  $("starters").querySelectorAll(".starter").forEach((b) => b.addEventListener("click", () => {
+    $("sentence").value = b.textContent; $("sentence").focus(); $("teach-err").hidden = true;
   }));
+  setRobot(); say(again ? "I'm listening. Tell me step by step!" : "Teach me! Tell me a rule that works every time.");
+  show("teach");
 }
 
-function setSkill(name) {
-  state.skill = name;
-  document.querySelectorAll(".skill").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.skill === name)));
-  const sk = state.skills[name];
-  $("starters").innerHTML = STARTERS[name].map((s) => `<button class="starter" type="button">${esc(s)}</button>`).join("");
-  $("starters").querySelectorAll(".starter").forEach((b) => b.addEventListener("click", () => { $("sentence").value = b.textContent; $("sentence").focus(); }));
-  renderCode(sk.current || sk.code);
-  renderWords("", []);
-  renderGrid(sk.lastGrade);
-  $("readout").hidden = true; $("detail").textContent = ""; $("stamp").hidden = true;
-  setRobot();
-  say(sk.welcome);
-}
-
-function busy(on, text) {
-  state.busy = on;
-  ["teach", "quiz", "reset"].forEach((id) => ($(id).disabled = on));
-  $("status").textContent = text || "";
+function thinking(stage) {
+  document.querySelectorAll("#think li").forEach((li) => {
+    const order = ["listen", "code", "box"], i = order.indexOf(li.dataset.t), at = order.indexOf(stage);
+    li.classList.toggle("done", i < at); li.classList.toggle("now", i === at);
+  });
 }
 
 async function teach() {
   const sentence = $("sentence").value.trim();
-  if (!sentence) { say("Tell me the rule first! Type it in the box."); $("sentence").focus(); return; }
-  busy(true, "Turning your words into code on Vultr…");
-  $("stamp").hidden = true; $("readout").hidden = true; $("detail").textContent = "";
-  setRobot("is-thinking");
-  const t1 = setTimeout(() => { $("status").textContent = "Testing his new brain in a throwaway sandbox…"; setRobot("is-thinking", "is-running"); }, 1500);
+  if (!sentence) { $("teach-err").textContent = "Tell Ahmes the rule first: talk or type it."; $("teach-err").hidden = false; $("sentence").focus(); return; }
+  if (state.busy) return;
+  state.busy = true;
+  const previous = sk().current || sk().code;
+  show("think"); thinking("listen"); setRobot("is-thinking");
+  const t1 = setTimeout(() => thinking("code"), 700);
+  const t2 = setTimeout(() => { thinking("box"); setRobot("is-thinking", "is-running"); }, 2200);
   try {
-    const d = await api("/api/teach", { sid: state.sid, skill: state.skill, sentence });
-    clearTimeout(t1);
-    const sk = state.skills[state.skill];
-    if (d.outcome === "timeout" || d.outcome === "oom") {
-      setRobot(d.outcome === "timeout" ? "is-dizzy" : "is-full");
-      $("stamp").hidden = false;
-      $("stamp-time").textContent = d.outcome === "timeout" ? `${(d.run.elapsed_ms / 1000).toFixed(1)} s` : "64 MB";
-      renderCode(d.proposed, sk.current || sk.code);
-      renderWords(sentence, d.steps);
-      renderGrid(d.grade);
-      say(d.say, d.voice);
-      $("status").textContent = `Container ${d.run.container_id} was stopped and removed. Ahmes kept his old brain.`;
-      refreshLog();
-      return;
-    }
-    if (d.outcome === "partial" || d.outcome === "cured") {
-      sk.current = d.code; sk.lastGrade = d.grade;
-      renderCode(d.code, d.previous);
-      renderWords(sentence, d.steps);
-      renderGrid(d.grade);
-      const ro = d.read_out || {};
-      if (d.outcome === "cured") { setRobot("is-happy"); $("readout").hidden = true; }
-      else {
-        setRobot("is-confused");
-        const trap = ro.trap ? ` Try him on ${ro.trap.problem}: he says ${ro.trap.his_answer}.` : "";
-        $("readout").innerHTML = `<strong>Ahmes now ${esc(ro.label)}.</strong>${esc(trap)}`;
-        $("readout").hidden = false;
-      }
-      say(d.say, d.voice);
-      $("status").textContent = `Tested in container ${d.run.container_id} in ${d.run.elapsed_ms} ms, then destroyed.`;
-      refreshLog();
-      return;
-    }
-    setRobot("is-confused");
-    if (d.outcome === "blocked") { renderCode(d.proposed || d.code); renderWords(sentence, d.steps); }
-    say(d.say, d.voice);
-    $("status").textContent = d.outcome === "blocked" ? `The code guard refused it: ${d.reason}.` : d.outcome === "rejected" ? (["BUSY", "ERROR", "OTHER_KILL", "OK"].includes(d.reason) ? "The sandbox couldn't test that brain, so nothing changed. Try again." : "The compiler heard more than you said, so nothing changed.") : "";
+    const d = await api("/api/teach", { sid: state.sid, skill: state.skill, sentence, homework: sk().homework.args });
+    clearTimeout(t1); clearTimeout(t2);
+    showTeachInHow(d, sentence, previous);
+    if (d.outcome === "partial" || d.outcome === "cured") return afterTeach(d, sentence);
+    oops(d);
   } catch (e) {
-    clearTimeout(t1); setRobot("is-confused"); say("Oops, my brain is offline for a moment."); $("status").textContent = e.message;
-  } finally { busy(false, $("status").textContent); }
+    clearTimeout(t1); clearTimeout(t2);
+    oops({ outcome: "offline", say: "Oops, my brain is offline for a moment.", reason: e.message });
+  } finally { state.busy = false; }
 }
 
+// ---------- step 3: he tries again ----------
+function quoteLine(steps, sentence) {
+  const qs = (steps || []).map((s) => s.quote).filter(Boolean);
+  return qs.length ? `You told me: ${qs.map((q) => `“${q}”`).join(", ")}` : `You told me: “${sentence}”`;
+}
+
+function afterTeach(d, sentence) {
+  sk().current = d.code;
+  renderTricks(d.tricks);
+  const r = d.retry;
+  $("you-said").textContent = quoteLine(d.steps, sentence);
+  $("retry-problem").innerHTML = problemHTML(state.skill, r.args, r.out, r.ok ? "ok" : "bad");
+  $("retry-why").hidden = r.ok;
+  if (r.ok) {
+    $("retry-title").textContent = "He got his homework right!";
+    $("retry-text").textContent = "Now let's see if it sticks on problems he's never seen.";
+    $("retry-next").textContent = "Quiz him";
+    $("retry-next").dataset.next = "quiz";
+    setRobot("is-happy");
+  } else {
+    $("retry-title").textContent = "Still wrong. He needs more help";
+    $("retry-text").textContent = "What did he miss? Look at the picture, then teach him again.";
+    $("retry-next").textContent = "Teach him again";
+    $("retry-next").dataset.next = "teach";
+    setRobot("is-confused");
+  }
+  say(r.why, r.voice);
+  show("retry");
+}
+
+// ---------- when the robot gets dizzy, full, or confused ----------
+const OOPS = {
+  timeout: ["Ahmes got dizzy!", "Your rule made him go round and round forever. The safe box stopped him after 3 seconds, and he kept his old brain."],
+  oom: ["His head got too full!", "Your rule made him remember too much. The safe box stopped him at 64 MB, and he kept his old brain."],
+  blocked: ["That isn't maths", "The code guard stopped it before it ran. Try a rule with numbers."],
+  no_rule: ["That's an answer, not a rule", "Ahmes needs to know what to do on a new problem, not just this one."],
+  rejected: ["He heard more than you said", "Say it step by step, one idea at a time."],
+  unkind: ["Let's keep it kind", "Keep it about maths, and don't share things about yourself, like where you live."],
+  offline: ["Ahmes's brain is offline", "Wait a moment, then try again."],
+};
+function oops(d) {
+  const [title, sub] = OOPS[d.outcome] || OOPS.rejected;
+  const stopped = d.outcome === "timeout" || d.outcome === "oom";
+  $("stamp").dataset.on = stopped ? "1" : "";
+  if (stopped) $("stamp-time").textContent = d.outcome === "timeout" ? `${(d.run.elapsed_ms / 1000).toFixed(1)} s` : "64 MB";
+  $("oops-title").textContent = title;
+  $("oops-text").textContent = d.say || "";
+  $("oops-sub").textContent = sub;
+  setRobot(d.outcome === "timeout" ? "is-dizzy" : d.outcome === "oom" ? "is-full" : "is-confused");
+  say(d.say, d.voice);
+  show("oops");
+}
+
+// ---------- step 4: quiz, one card per trick ----------
 async function quiz() {
-  busy(true, "Quizzing Ahmes on 40 brand-new problems…");
-  setRobot("is-thinking", "is-running");
+  if (state.busy) return;
+  state.busy = true;
+  show("quiz"); $("cards").innerHTML = ""; $("quiz-text").textContent = "Ahmes is taking a brand-new test in a fresh safe box…";
+  $("quiz-next").hidden = true; setRobot("is-thinking", "is-running");
   try {
     const d = await api("/api/quiz", { sid: state.sid, skill: state.skill });
-    const g = { ...d.grade, rows: d.grade.rows };
-    renderGrid({ right: d.grade.right, total: d.grade.total, rows: g.rows });
-    $("score").textContent = `Quiz: ${d.grade.right} of ${d.grade.total} right`;
-    setRobot(d.grade.right === d.grade.total ? "is-happy" : "is-confused");
-    say(d.grade.right === d.grade.total ? "A quiz! I got every one right!" : `A quiz! I got ${d.grade.right} out of ${d.grade.total}. Keep teaching me!`);
-    $("status").textContent = `Quiz ran in container ${d.run.container_id}, then it was destroyed.`;
-    refreshLog();
-  } catch (e) { $("status").textContent = e.message; setRobot(); } finally { busy(false, $("status").textContent); }
+    renderGrid(d.grade); refreshLog();
+    $("cards").innerHTML = d.cards.map((c, i) => `<li class="qcard ${c.ok ? "ok" : "bad"}" style="--i:${i}">
+      <span class="q-trick">${esc(c.trick_name)}</span><span class="q-prob">${esc(c.problem)}</span>
+      <span class="q-ans">Ahmes: ${esc(c.his_answer)}</span><span class="q-mark" aria-label="${c.ok ? "right" : "wrong"}">${c.ok ? "✓" : "✗"}</span></li>`).join("");
+    setTimeout(() => quizResult(d), 400 + d.cards.length * 450);
+  } catch (e) {
+    $("quiz-text").textContent = e.message; setRobot(); state.busy = false;
+  }
 }
 
-async function reset() {
+function quizResult(d) {
+  state.busy = false;
+  renderTricks(d.tricks);
+  if (!d.next_homework) {
+    setRobot("is-happy");
+    const other = state.skill === "compare_decimals" ? "add_fractions" : "compare_decimals";
+    $("win-sub").textContent = `He got all ${d.grade.total} brand-new ${state.skill === "compare_decimals" ? "decimal" : "fraction"} problems right, checked in a safe box.`;
+    $("win-next").textContent = other === "add_fractions" ? "Teach him fractions" : "Teach him decimals";
+    $("win-next").dataset.skill = other;
+    say("I got every one right! You're my teacher!");
+    return show("win");
+  }
+  const n = d.next_homework;
+  sk().nextHomework = n;
+  $("quiz-text").textContent = `This one tricked him: ${n.problem}. He says: “${n.why}”`;
+  $("quiz-next").hidden = false;
+  setRobot("is-confused"); say(n.why, n.voice);
+}
+
+// ---------- voice: record, make a small WAV, Vultr's omni model writes down the words ----------
+const mic = { rec: null, chunks: [], timer: null };
+
+async function toWav(blob) {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const buf = await ctx.decodeAudioData(await blob.arrayBuffer());
+  const rate = 16000, len = Math.ceil(buf.duration * rate);
+  const off = new OfflineAudioContext(1, len, rate);
+  const src = off.createBufferSource(); src.buffer = buf; src.connect(off.destination); src.start();
+  const pcm = (await off.startRendering()).getChannelData(0);
+  const out = new DataView(new ArrayBuffer(44 + pcm.length * 2));
+  const w = (o, s) => [...s].forEach((c, i) => out.setUint8(o + i, c.charCodeAt(0)));
+  w(0, "RIFF"); out.setUint32(4, 36 + pcm.length * 2, true); w(8, "WAVE"); w(12, "fmt ");
+  out.setUint32(16, 16, true); out.setUint16(20, 1, true); out.setUint16(22, 1, true);
+  out.setUint32(24, rate, true); out.setUint32(28, rate * 2, true); out.setUint16(32, 2, true); out.setUint16(34, 16, true);
+  w(36, "data"); out.setUint32(40, pcm.length * 2, true);
+  pcm.forEach((v, i) => out.setInt16(44 + i * 2, Math.max(-1, Math.min(1, v)) * 0x7fff, true));
+  ctx.close();
+  return new Blob([out], { type: "audio/wav" });
+}
+
+async function micToggle() {
+  if (mic.rec) { mic.rec.stop(); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mic.chunks = []; mic.rec = new MediaRecorder(stream);
+    mic.rec.ondataavailable = (e) => mic.chunks.push(e.data);
+    mic.rec.onstop = async () => {
+      clearTimeout(mic.timer); stream.getTracks().forEach((t) => t.stop());
+      const blob = new Blob(mic.chunks, { type: mic.rec.mimeType }); mic.rec = null;
+      micUI("hearing");
+      try {
+        const wav = await toWav(blob);
+        const r = await fetch(`/api/listen?sid=${encodeURIComponent(state.sid)}`, { method: "POST", headers: { "Content-Type": "audio/wav" }, body: wav });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.detail || "Ahmes couldn't hear that.");
+        if (!d.text) throw new Error("Ahmes didn't hear any words. Try again, a bit closer.");
+        $("sentence").value = d.text; $("teach-err").hidden = true;
+        say("Did I hear you right? Fix the words if not, then press Teach Ahmes.");
+      } catch (e) { $("teach-err").textContent = e.message; $("teach-err").hidden = false; }
+      micUI("idle");
+    };
+    mic.rec.start(); micUI("on");
+    mic.timer = setTimeout(() => mic.rec && mic.rec.stop(), 15000);
+  } catch {
+    $("teach-err").textContent = "The microphone isn't available. Type the rule instead."; $("teach-err").hidden = false;
+  }
+}
+function micUI(mode) {
+  $("mic").classList.toggle("on", mode === "on"); $("mic").setAttribute("aria-pressed", String(mode === "on"));
+  $("mic-label").textContent = mode === "on" ? "Listening… tap to stop" : mode === "hearing" ? "Writing down your words…" : "Tap to talk";
+  $("mic").disabled = mode === "hearing";
+}
+
+// ---------- skills, start ----------
+function setSkill(name) {
+  state.skill = name;
+  document.querySelectorAll(".skill").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.skill === name)));
+  $("sentence").value = "";
+  renderTricks(sk().tricks);
+  renderCode(sk().current || sk().code); renderWords("", []); renderGrid(null);
+  homework(sk().homework);
+}
+
+async function startOver() {
   const d = await api("/api/reset", { sid: state.sid, skill: state.skill });
-  const sk = state.skills[state.skill]; sk.current = d.code; sk.lastGrade = null;
+  sk().current = d.code; sk().tricks = sk().startTricks; sk().homework = sk().startHomework;
   setSkill(state.skill);
 }
 
-function facts(run) {
-  const L = run.limits || {};
-  const rows = [
-    ["Container", `${run.container} (${run.container_id || ""})`],
-    ["Network", L.network], ["Memory cap", L.memory_bytes ? `${L.memory_bytes / 1048576} MB` : ""],
-    ["CPU", L.nano_cpus ? `${L.nano_cpus / 1e9} core` : ""], ["Process limit", L.pids_limit],
-    ["Read-only disk", String(L.read_only_root)], ["Capabilities dropped", (L.cap_drop || []).join(", ")],
-    ["Runtime", L.runtime], ["Took", `${run.elapsed_ms} ms`], ["Exit code", run.exit_code],
-    ["Killed for memory", String(run.oom_killed)], ["Removed after", run.removed_verified ? "yes, checked by name" : "no"],
-  ];
-  return `<dl class="facts">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>`;
-}
-
-async function runChip(name, beyond) {
-  const box = $("result");
-  box.hidden = false; box.innerHTML = "<p>Running in a fresh container…</p>";
-  try {
-    const d = beyond ? await api(`/api/beyond/${name}`) : await api("/api/chip", { sid: state.sid, chip: name });
-    const bad = d.verdict !== "OK";
-    let html = `<p class="verdict ${beyond ? "good" : bad ? "bad" : "good"}">${esc(beyond ? "Container held" : VERDICT[d.verdict] || d.verdict)}</p>`;
-    html += `<pre>${esc(beyond ? d.script : d.code)}</pre>`;
-    if (beyond) html += `<p><strong>What happened inside:</strong></p><pre>${esc(d.output || "(no output)")}</pre>`;
-    if (d.reason) html += `<p>Guard: ${esc(d.reason)}${d.line ? ` (line ${d.line})` : ""}.</p>`;
-    if (d.witness) html += `<p>Meanwhile a normal maths check of Ahmes's brain ran in another container: <strong>${esc(VERDICT[d.witness.verdict] || d.witness.verdict)}</strong>. The server kept working.</p>`;
-    if (d.run) html += facts(d.run) + `<p><a href="/api/receipt/${esc(d.run.id)}">Download the receipt (JSON)</a></p>`;
-    box.innerHTML = html;
-    if (!beyond && d.say) { setRobot(d.verdict === "TIMEOUT" ? "is-dizzy" : d.verdict === "OOM" ? "is-full" : "is-confused"); say(d.say, d.voice); }
-    refreshLog();
-  } catch (e) { box.innerHTML = `<p>${esc(e.message)}</p>`; }
-}
-
-async function refreshLog() {
-  try {
-    const [log, live] = await Promise.all([fetch("/api/log").then((r) => r.json()), fetch("/api/sandboxes").then((r) => r.json())]);
-    $("log").innerHTML = log.map((r) => `<tr><td>${new Date(r.at * 1000).toLocaleTimeString()}</td><td>${esc(r.purpose)}</td>
-      <td class="${r.verdict === "OK" ? "v-OK" : "v-bad"}">${esc(r.verdict)}</td><td>${r.elapsed_ms}</td><td>${r.removed ? "yes" : "no"}</td>
-      <td><a href="/api/receipt/${esc(r.id)}">JSON</a></td></tr>`).join("");
-    $("live").textContent = live.containers.length ? `Containers running now: ${live.containers.join(", ")}` : "Containers running now: none. Each one is destroyed after its task.";
-  } catch { /* the log is a nice-to-have */ }
-}
-
 async function start() {
-  renderGrid(null);
-  $("chips").innerHTML = CHIPS.map(([k, l]) => `<button class="chip" type="button" data-k="${k}">${esc(l)}</button>`).join("");
-  $("beyond").innerHTML = BEYOND.map(([k, l]) => `<button class="chip" type="button" data-k="${k}">${esc(l)}</button>`).join("");
-  $("chips").querySelectorAll(".chip").forEach((b) => b.addEventListener("click", () => runChip(b.dataset.k, false)));
-  $("beyond").querySelectorAll(".chip").forEach((b) => b.addEventListener("click", () => runChip(b.dataset.k, true)));
-  document.querySelectorAll(".skill").forEach((b) => b.addEventListener("click", () => setSkill(b.dataset.skill)));
+  setupHow();
+  if (!(navigator.mediaDevices && window.MediaRecorder)) $("mic").hidden = true;
+  document.querySelectorAll(".skill").forEach((b) => b.addEventListener("click", () => !state.busy && setSkill(b.dataset.skill)));
+  $("mark-yes").addEventListener("click", () => markHomework(true));
+  $("mark-no").addEventListener("click", () => markHomework(false));
+  $("go-teach").addEventListener("click", () => ($("go-teach").dataset.next === "quiz" ? quiz() : teachScreen(false)));
   $("teach").addEventListener("click", teach);
-  $("quiz").addEventListener("click", quiz);
-  $("reset").addEventListener("click", reset);
-  $("sentence").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (!state.busy) teach(); } });
+  $("mic").addEventListener("click", micToggle);
+  $("sentence").addEventListener("input", () => { $("teach-err").hidden = true; });
+  $("sentence").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); teach(); } });
+  $("retry-next").addEventListener("click", () => ($("retry-next").dataset.next === "quiz" ? quiz() : teachScreen(true)));
+  $("retry-why").addEventListener("click", () => {
+    const hw = sk().homework; const r = { ...hw };
+    $("proof-visual").innerHTML = proofFor(state.skill, r.args, null).svg;
+    $("proof-title").textContent = "Here's the right answer"; $("proof-text").textContent = proofFor(state.skill, r.args, null).caption;
+    $("go-teach").textContent = "Teach him again"; $("go-teach").dataset.next = "teach"; show("proof");
+  });
+  $("oops-again").addEventListener("click", () => teachScreen(true));
+  $("quiz-next").addEventListener("click", () => homework(sk().nextHomework));
+  $("win-next").addEventListener("click", () => setSkill($("win-next").dataset.skill));
+  $("win-reset").addEventListener("click", startOver);
   $("sound").addEventListener("click", () => {
     state.voice = !state.voice; $("sound").setAttribute("aria-pressed", String(state.voice));
     $("sound").textContent = state.voice ? "Voice on" : "Voice off"; if (!state.voice) state.audio.pause();
   });
+  $("how-btn").addEventListener("click", () => {
+    const open = $("how").hidden; $("how").hidden = !open; $("how-btn").setAttribute("aria-expanded", String(open));
+    $("how-btn").textContent = open ? "Back to Ahmes" : "How it works";
+    if (open) { refreshLog(); $("how").scrollIntoView({ behavior: "smooth" }); } else window.scrollTo({ top: 0, behavior: "smooth" });
+  });
   try {
     const d = await api("/api/session");
-    state.sid = d.sid;
-    state.skills = d.skills;
+    state.sid = d.sid; state.skills = d.skills;
+    Object.values(state.skills).forEach((s) => { s.startTricks = s.tricks; s.startHomework = s.homework; });
     setSkill(state.skill);
     refreshLog();
-  } catch (e) { say("I can't reach my brain right now. Try reloading."); $("status").textContent = e.message; }
+  } catch (e) { say("I can't reach my brain right now. Try reloading."); }
 }
 start();
