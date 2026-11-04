@@ -1,0 +1,257 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; font-family: "Nunito", sans-serif; color: #16224A; overflow: hidden; }
+    #l-ground { position: absolute; inset: 0; background-color: #F7FAFD;
+      background-image: linear-gradient(#D9E6F3 2px, transparent 2px), linear-gradient(90deg, #D9E6F3 2px, transparent 2px);
+      background-size: 60px 60px; }
+    #l-ahmes { position: absolute; left: 170px; top: 150px; width: 660px; height: 770px; z-index: 3; }
+    #l-ahmes svg { width: 100%; height: 100%; overflow: visible; }
+    .card { position: absolute; left: 1010px; top: 170px; width: 760px; height: 440px; z-index: 2; }
+    .card-in { position: absolute; inset: 0; background: #FFFFFF; border: 2px solid #C9D7EA; border-radius: 28px; }
+    .card-ask { position: absolute; left: 0; right: 0; top: 40px; text-align: center; font-weight: 800; font-size: 44px; color: #4E5B80; }
+    .num { position: absolute; top: 170px; width: 300px; text-align: center; font-weight: 900; font-size: 150px; line-height: 1; font-variant-numeric: tabular-nums; }
+    .card svg.marks { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+    .cross { position: absolute; left: 70px; top: 120px; width: 260px; text-align: center; font-weight: 900; font-size: 230px; line-height: 1; color: #C6432A; }
+    .fracs { position: absolute; left: 0; right: 0; top: 130px; display: flex; justify-content: center; align-items: center; gap: 40px; }
+    .frac { display: flex; flex-direction: column; align-items: center; min-width: 140px; font-weight: 900; font-size: 96px; line-height: 1.05; font-variant-numeric: tabular-nums; }
+    .frac .bar { width: 100%; height: 8px; background: #16224A; border-radius: 4px; margin: 6px 0; }
+    .plus { font-weight: 900; font-size: 96px; }
+    .slot { position: absolute; left: 1010px; top: 670px; width: 760px; height: 236px; z-index: 4; }
+    .bubble { position: absolute; inset: 0; background: #FFFFFF; border: 5px solid #E0A526; border-radius: 34px;
+      display: flex; align-items: center; padding: 0 44px; font-weight: 800; font-size: 46px; line-height: 1.25; }
+    .bubble::after { content: ""; position: absolute; left: 90px; bottom: -44px; border: 22px solid transparent; border-top: 22px solid #E0A526; }
+    .bubble .w { opacity: 0; }
+    .code { position: absolute; inset: 0; background: #16224A; border-radius: 28px; padding: 30px 40px;
+      font-family: "JetBrains Mono", monospace; font-size: 30px; line-height: 1.45; color: #E6EEFF; white-space: pre; font-variant-ligatures: none; font-feature-settings: "calt" 0, "liga" 0; }
+    .code .c { color: #7FF3E6; }
+    .code .ln { display: block; clip-path: inset(0 100% 0 0); }
+    #l-box { position: absolute; left: 70px; top: 64px; width: 860px; height: 936px; z-index: 5; }
+    #l-box-in { position: absolute; inset: 0; }
+    .box-wall { position: absolute; left: 0; top: 64px; right: 0; bottom: 0; border: 8px solid #12857D; border-radius: 36px; background: rgba(18, 133, 125, 0.08); }
+    .box-tab { position: absolute; left: 36px; top: 0; height: 72px; padding: 0 28px; background: #12857D; border-radius: 18px 18px 0 0;
+      display: flex; align-items: center; gap: 24px; color: #FFFFFF; font-weight: 900; font-size: 38px; }
+    .box-tab .t { font-family: "JetBrains Mono", monospace; font-weight: 700; font-size: 34px; min-width: 110px; }
+    .stopped { position: absolute; left: 230px; top: 720px; padding: 10px 30px; border: 7px solid #C6432A; border-radius: 16px;
+      color: #C6432A; font-weight: 900; font-size: 64px; background: #F7FAFD; opacity: 0; }
+    .spark { position: absolute; width: 26px; height: 26px; background: #E0A526; border-radius: 4px; opacity: 0; }
+    #l-title { position: absolute; left: 1010px; top: 330px; width: 800px; z-index: 6; }
+    .title-name { font-weight: 900; font-size: 128px; line-height: 1; letter-spacing: -0.02em; white-space: nowrap; }
+    .title-name span { opacity: 0; display: inline-block; }
+    .title-sub { margin-top: 36px; font-weight: 800; font-size: 46px; line-height: 1.3; color: #4E5B80; opacity: 0; }
+    .title-sub b { color: #12857D; font-weight: 900; }
+  </style>
+  <div id="root" data-composition-id="lesson" data-width="1920" data-height="1080">
+    <div id="l-ground" class="clip" data-start="0" data-duration="26.3" data-track-index="0"></div>
+
+    <div id="l-ahmes" class="clip" data-start="0" data-duration="26.3" data-track-index="1">
+      <svg viewBox="0 0 240 280" aria-label="Ahmes the robot">
+        <defs>
+          <radialGradient id="l-glow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#7FF3E6"/><stop offset="100%" stop-color="#1FA39A"/></radialGradient>
+        </defs>
+        <g id="l-a-spin"><g id="l-a-squash"><g id="l-a-bob">
+          <line x1="120" y1="38" x2="120" y2="14" stroke="#16224A" stroke-width="4" stroke-linecap="round"/>
+          <path id="l-a-nib" d="M114 16 L120 2 L126 16 Z" fill="#E0A526"/>
+          <g id="l-a-head">
+            <path d="M58 70 Q60 40 120 38 Q180 40 182 70 L192 128 Q170 120 166 104 L74 104 Q70 120 48 128 Z" fill="#2449A8"/>
+            <path d="M62 78 L52 120 M74 72 L64 118 M166 72 L176 118 M178 78 L188 120" stroke="#E0A526" stroke-width="5" stroke-linecap="round"/>
+            <rect x="72" y="52" width="96" height="70" rx="22" fill="#16224A"/>
+            <g id="l-a-eyes">
+              <circle class="pupil" cx="100" cy="84" r="9" fill="url(#l-glow)"/>
+              <circle class="pupil" cx="140" cy="84" r="9" fill="url(#l-glow)"/>
+              <path class="happy" d="M91 87 Q100 76 109 87" fill="none" stroke="#7FF3E6" stroke-width="4" stroke-linecap="round" opacity="0"/>
+              <path class="happy" d="M131 87 Q140 76 149 87" fill="none" stroke="#7FF3E6" stroke-width="4" stroke-linecap="round" opacity="0"/>
+              <path id="l-spiral-l" class="spiral" d="M100 84 m0 0 a2 2 0 1 1 3 0 a5 5 0 1 1 -8 0 a8 8 0 1 1 13 0" fill="none" stroke="#7FF3E6" stroke-width="2.4" opacity="0"/>
+              <path id="l-spiral-r" class="spiral" d="M140 84 m0 0 a2 2 0 1 1 3 0 a5 5 0 1 1 -8 0 a8 8 0 1 1 13 0" fill="none" stroke="#7FF3E6" stroke-width="2.4" opacity="0"/>
+            </g>
+            <path id="l-a-mouth" d="M108 106 Q120 113 132 106" fill="none" stroke="#7FF3E6" stroke-width="3.5" stroke-linecap="round"/>
+          </g>
+          <rect x="78" y="134" width="84" height="88" rx="18" fill="#2449A8"/>
+          <rect x="94" y="150" width="52" height="40" rx="8" fill="#F7FAFD"/>
+          <text x="120" y="181" text-anchor="middle" font-family="Nunito" font-weight="900" font-size="30" fill="#16224A">½</text>
+          <circle cx="104" cy="204" r="5" fill="#E0A526"/><circle cx="120" cy="204" r="5" fill="#1FA39A"/><circle cx="136" cy="204" r="5" fill="#E0A526"/>
+          <path id="l-a-arm-l" d="M80 150 Q56 170 60 198" fill="none" stroke="#2449A8" stroke-width="12" stroke-linecap="round"/>
+          <path id="l-a-arm-r" d="M160 150 Q184 170 180 198" fill="none" stroke="#2449A8" stroke-width="12" stroke-linecap="round"/>
+          <rect x="92" y="222" width="18" height="34" rx="6" fill="#16224A"/><rect x="130" y="222" width="18" height="34" rx="6" fill="#16224A"/>
+        </g></g></g>
+      </svg>
+    </div>
+
+    <div id="l-card1" class="card clip" data-start="0" data-duration="13.6" data-track-index="2">
+      <div id="l-card1-in" class="card-in">
+        <div class="card-ask">Which is bigger?</div>
+        <div class="num" style="left: 50px">0.45</div>
+        <div class="num" style="left: 410px">0.5</div>
+        <svg class="marks" viewBox="0 0 760 440">
+          <path id="l-ring1" opacity="0" d="M200 150 C330 150 350 330 200 335 C70 338 50 160 190 148" fill="none" stroke="#2449A8" stroke-width="9" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>
+          <path id="l-ring2" opacity="0" d="M560 150 C680 152 690 330 560 335 C440 338 425 160 552 148" fill="none" stroke="#12857D" stroke-width="10" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>
+          <path id="l-tick" opacity="0" d="M640 118 L668 146 L722 82" fill="none" stroke="#12857D" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>
+        </svg>
+        <div id="l-cross" class="cross" style="opacity: 0" data-layout-allow-overlap>✗</div>
+      </div>
+    </div>
+
+    <div id="l-card2" class="card clip" data-start="13.2" data-duration="10.45" data-track-index="2">
+      <div id="l-card2-in" class="card-in" style="opacity: 0">
+        <div class="card-ask">Add them</div>
+        <div id="l-fracs" class="fracs">
+          <div class="frac"><span>1</span><span class="bar"></span><span id="l-den-a">2</span></div>
+          <div class="plus">+</div>
+          <div class="frac"><span>1</span><span class="bar"></span><span id="l-den-b">3</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="l-bubble1" class="slot clip" data-start="6.5" data-duration="2.5" data-track-index="3">
+      <div id="l-bubble1-in" class="bubble">
+        <span>“<span class="w">Look </span><span class="w">at </span><span class="w">the </span><span class="w">tenths </span><span class="w">first.</span>”</span>
+      </div>
+    </div>
+
+    <div id="l-code1" class="slot clip" data-start="9.0" data-duration="4.6" data-track-index="3">
+      <div id="l-code1-in" class="code" style="opacity: 0"><span class="ln c"># "look at the tenths first"</span><span class="ln">return bigger_tenths(a, b)</span></div>
+    </div>
+
+    <div id="l-bubble2" class="slot clip" data-start="13.5" data-duration="3.45" data-track-index="3">
+      <div id="l-bubble2-in" class="bubble">
+        <span>“<span class="w">Keep </span><span class="w">doubling </span><span class="w">both </span><span class="w">bottoms </span><span class="w">until </span><span class="w">they’re </span><span class="w">the </span><span class="w">same.</span>”</span>
+      </div>
+    </div>
+
+    <div id="l-code2" class="slot clip" data-start="16.95" data-duration="6.7" data-track-index="3">
+      <div id="l-code2-in" class="code" style="opacity: 0"><span class="ln c"># "keep doubling both bottoms"</span><span class="ln">while a.bottom != b.bottom:</span><span class="ln">    a.bottom *= 2</span><span class="ln">    b.bottom *= 2</span></div>
+    </div>
+
+    <div id="l-sparks" class="clip" data-start="8.9" data-duration="8.7" data-track-index="4" data-layout-ignore>
+      <div class="spark" style="left: 462px; top: 140px"></div>
+      <div class="spark" style="left: 512px; top: 120px"></div>
+      <div class="spark" style="left: 560px; top: 146px"></div>
+    </div>
+
+    <div id="l-box" class="clip" data-start="16.9" data-duration="4.6" data-track-index="5">
+      <div id="l-box-in">
+        <div class="box-wall"></div>
+        <div class="box-tab">Sandbox <span id="l-timer" class="t">0.0 s</span></div>
+        <div id="l-stopped" class="stopped">Stopped</div>
+      </div>
+    </div>
+
+    <div id="l-title" class="clip" data-start="23.6" data-duration="2.7" data-track-index="6">
+      <div class="title-name"><span>T</span><span>e</span><span>a</span><span>c</span><span>h</span><span>&nbsp;</span><span>A</span><span>h</span><span>m</span><span>e</span><span>s</span></div>
+      <div id="l-title-sub" class="title-sub">Children teach.<br><b>A sandbox keeps it safe.</b></div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      const SPIN_START = 17.4, SPIN_END = 20.4, RESET_AT = 21.4;
+      const timer = document.getElementById("l-timer");
+      const denA = document.getElementById("l-den-a");
+      const denB = document.getElementById("l-den-b");
+
+      function renderCounters(t) {
+        const p = Math.min(Math.max((t - SPIN_START) / (SPIN_END - SPIN_START), 0), 1);
+        const k = t >= RESET_AT ? 0 : Math.floor(p * p * 12);
+        denA.textContent = String(2 * 2 ** k);
+        denB.textContent = String(3 * 2 ** k);
+        timer.textContent = (p * 3).toFixed(1) + " s";
+        timer.style.color = p >= 1 ? "#FFD9CF" : "#FFFFFF";
+      }
+      tl.to({}, { duration: 26.3, ease: "none", onUpdate: () => renderCounters(tl.time()) }, 0);
+
+      const show = (sel, on, t, d = 0.12) => tl.to(sel, { opacity: on ? 1 : 0, duration: d, ease: "none" }, t);
+      const face = (state, t) => {
+        show("#l-a-eyes .pupil", state === "normal", t);
+        show("#l-a-eyes .happy", state === "happy", t);
+        show("#l-a-eyes .spiral", state === "dizzy", t);
+      };
+      const mouth = { smile: "M108 106 Q120 113 132 106", frown: "M108 111 Q120 103 132 111", wow: "M112 107 Q120 114 128 107" };
+      const setMouth = (m, t) => tl.to("#l-a-mouth", { attr: { d: mouth[m] }, duration: 0.18, ease: "power2.out" }, t);
+      const pointArm = (t, hold) => {
+        tl.fromTo("#l-a-arm-r", { rotation: 0 }, { rotation: -78, svgOrigin: "160 150", duration: 0.35, ease: "back.out(1.6)" }, t);
+        tl.to("#l-a-arm-r", { rotation: 0, svgOrigin: "160 150", duration: 0.3, ease: "power2.inOut" }, t + hold);
+      };
+      const hop = (t) => {
+        tl.to("#l-a-squash", { scaleY: 0.9, scaleX: 1.05, svgOrigin: "120 256", duration: 0.12, ease: "power2.out" }, t);
+        tl.to("#l-a-squash", { scaleY: 1.06, scaleX: 0.97, y: -26, svgOrigin: "120 256", duration: 0.22, ease: "power3.out" }, t + 0.12);
+        tl.to("#l-a-squash", { scaleY: 1, scaleX: 1, y: 0, svgOrigin: "120 256", duration: 0.35, ease: "back.out(1.6)" }, t + 0.34);
+      };
+      const blink = (t) => tl.to("#l-a-eyes", { scaleY: 0.1, svgOrigin: "120 84", duration: 0.06, yoyo: true, repeat: 1, ease: "power1.inOut" }, t);
+      const typeWords = (sel, t0, gap) => gsap.utils.toArray(sel).forEach((w, i) => tl.to(w, { opacity: 1, duration: 0.08, ease: "none" }, t0 + i * gap));
+      const bubbleIn = (sel, t) => tl.fromTo(sel, { y: 300 }, { y: 0, duration: 0.6, ease: "expo.out" }, t);
+      const bubbleInto = (sel, t) => tl.to(sel, { x: -880, y: -640, scale: 0.05, rotation: -20, borderColor: "#E0A526", backgroundColor: "#E0A526", duration: 0.55, ease: "power3.in" }, t);
+      const sparks = (t) => {
+        tl.fromTo("#l-sparks .spark", { opacity: 1, scale: 0.2, x: 0, y: 0 }, { scale: 1, x: (i) => [-40, 0, 40][i], y: (i) => [-30, -50, -24][i], rotation: 45, duration: 0.35, ease: "expo.out", stagger: 0.03 }, t);
+        tl.to("#l-sparks .spark", { opacity: 0, duration: 0.2, ease: "none" }, t + 0.3);
+        tl.fromTo("#l-a-nib", { scale: 1 }, { scale: 1.6, svgOrigin: "120 10", duration: 0.12, yoyo: true, repeat: 1, ease: "power2.out" }, t);
+      };
+      const codeIn = (sel, t) => {
+        tl.fromTo(sel, { opacity: 0, scale: 0.9, filter: "blur(8px)" }, { opacity: 1, scale: 1, filter: "blur(0px)", duration: 0.3, ease: "expo.out" }, t);
+        gsap.utils.toArray(sel + " .ln").forEach((ln, i) => tl.to(ln, { clipPath: "inset(0 0% 0 0)", duration: 0.32, ease: "none" }, t + 0.15 + i * 0.3));
+      };
+      const blurOut = (sel, t) => tl.to(sel, { opacity: 0, filter: "blur(8px)", duration: 0.18, ease: "power2.in" }, t);
+
+      tl.fromTo("#l-a-bob", { y: 0 }, { y: -5, duration: 1.1, ease: "sine.inOut", yoyo: true, repeat: 7 }, 0);
+      blink(1.6);
+
+      pointArm(0.7, 3.4);
+      tl.set("#l-ring1", { opacity: 1 }, 2.95);
+      tl.to("#l-ring1", { strokeDashoffset: 0, duration: 0.85, ease: "power1.inOut" }, 2.95);
+      face("happy", 3.85); hop(3.85);
+      tl.fromTo("#l-cross", { opacity: 0, scale: 1.7, rotation: -18 }, { opacity: 1, scale: 1, rotation: -8, duration: 0.2, ease: "power4.out" }, 5.0);
+      tl.fromTo("#l-card1-in", { x: 0 }, { keyframes: { x: [0, -10, 8, -4, 0] }, duration: 0.3, ease: "none" }, 5.2);
+      tl.to("#l-a-squash", { scaleY: 0.93, svgOrigin: "120 256", duration: 0.12, ease: "power2.out" }, 5.35);
+      tl.to("#l-a-squash", { scaleY: 1, svgOrigin: "120 256", duration: 0.4, ease: "back.out(1.6)" }, 5.47);
+      face("normal", 5.47); setMouth("frown", 5.5);
+      tl.to("#l-a-head", { rotation: 9, svgOrigin: "120 100", duration: 0.45, ease: "back.out(1.6)" }, 5.55);
+      blink(6.3);
+
+      bubbleIn("#l-bubble1-in", 6.55);
+      typeWords("#l-bubble1-in .w", 6.95, 0.21);
+      tl.to("#l-a-head", { rotation: -4, svgOrigin: "120 100", duration: 0.4, ease: "power2.inOut" }, 7.0);
+      bubbleInto("#l-bubble1-in", 8.45);
+      sparks(9.0); setMouth("wow", 9.0);
+      tl.to("#l-a-head", { rotation: 0, svgOrigin: "120 100", duration: 0.3, ease: "power2.out" }, 9.05);
+      codeIn("#l-code1-in", 9.05);
+
+      pointArm(10.0, 1.4);
+      tl.set("#l-ring2", { opacity: 1 }, 10.25);
+      tl.to("#l-ring2", { strokeDashoffset: 0, duration: 0.7, ease: "power1.inOut" }, 10.25);
+      tl.set("#l-tick", { opacity: 1 }, 10.9);
+      tl.to("#l-tick", { strokeDashoffset: 0, duration: 0.25, ease: "power2.out" }, 10.9);
+      face("happy", 11.05); setMouth("smile", 11.05); hop(11.1);
+      blink(12.6);
+
+      blurOut("#l-card1-in", 13.25); blurOut("#l-code1-in", 13.25);
+      tl.fromTo("#l-card2-in", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.15, ease: "expo.out" }, 13.42);
+      face("normal", 13.4);
+      bubbleIn("#l-bubble2-in", 13.55);
+      typeWords("#l-bubble2-in .w", 13.9, 0.27);
+      bubbleInto("#l-bubble2-in", 16.35);
+      sparks(16.9);
+      codeIn("#l-code2-in", 16.95);
+
+      tl.fromTo("#l-box-in", { y: -1100 }, { y: 0, duration: 0.35, ease: "power3.in" }, 16.95);
+      tl.fromTo("#l-box-in", { scaleY: 1 }, { keyframes: { scaleY: [1, 0.97, 1] }, transformOrigin: "50% 100%", duration: 0.25, ease: "power2.out" }, 17.3);
+      face("dizzy", 17.35); setMouth("wow", 17.35);
+      tl.fromTo("#l-spiral-l", { rotation: 0 }, { rotation: 1800, svgOrigin: "100 84", duration: 4.5, ease: "none" }, 17.35);
+      tl.fromTo("#l-spiral-r", { rotation: 0 }, { rotation: 1800, svgOrigin: "140 84", duration: 4.5, ease: "none" }, 17.35);
+      tl.fromTo("#l-a-spin", { rotation: 0 }, { rotation: 1440, svgOrigin: "120 150", duration: 3.0, ease: "power2.in" }, 17.4);
+      tl.to("#l-a-spin", { keyframes: { rotation: [1440, 1456, 1430, 1446, 1437, 1440] }, svgOrigin: "120 150", duration: 0.7, ease: "none" }, 20.4);
+      tl.fromTo("#l-stopped", { opacity: 0, scale: 1.8, rotation: -16 }, { opacity: 1, scale: 1, rotation: -7, duration: 0.2, ease: "power4.out" }, 20.38);
+      tl.to("#l-box-in", { y: -1150, duration: 0.4, ease: "power3.in" }, 20.95);
+      tl.fromTo("#l-fracs", { filter: "blur(0px)" }, { keyframes: { filter: ["blur(0px)", "blur(10px)", "blur(0px)"] }, duration: 0.26, ease: "none" }, 21.27);
+      face("normal", 22.0); setMouth("smile", 22.0);
+      tl.to("#l-a-head", { keyframes: { rotation: [0, -10, 9, -6, 3, 0] }, svgOrigin: "120 100", duration: 0.8, ease: "none" }, 22.2);
+      blink(23.0);
+
+      blurOut("#l-card2-in", 23.45); blurOut("#l-code2-in", 23.45);
+      tl.fromTo("#l-title .title-name span", { opacity: 0.3, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.13, ease: "power2.out", stagger: 0.06 }, 23.6);
+      tl.fromTo("#l-title-sub", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "expo.out" }, 24.3);
+      face("happy", 23.8);
+      tl.fromTo("#l-a-arm-r", { rotation: 0 }, { keyframes: { rotation: [0, -130, -105, -130, -105, -120] }, svgOrigin: "160 150", duration: 1.4, ease: "power1.inOut" }, 23.8);
+
+      renderCounters(0);
+      window.__timelines["lesson"] = tl;
+    })();
+  </script>
+</template>
