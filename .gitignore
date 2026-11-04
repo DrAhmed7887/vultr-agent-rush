@@ -50,3 +50,5 @@ dist/
 .vscode/
 *.swp
 *.swo
+video/out/
+video/node_modules/
