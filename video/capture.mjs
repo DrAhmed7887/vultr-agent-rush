@@ -76,7 +76,8 @@ if (!only || only === "C") await scene("C", async ({ page, mark, scrollY, topOf 
   await scrollY(y - 20); await sleep(600); mark("hood");
   await page.click('.chip[data-k="copying"]'); mark("click_oom");
   await page.waitForSelector("#result .facts", { timeout: 20000 }); mark("oom_done"); await sleep(1500);
-  await page.evaluate(() => window.scrollBy({ top: 330, behavior: "smooth" })); await sleep(1300); mark("oom_facts"); await sleep(3500);
+  const fy = await topOf("#result .facts");
+  await scrollY(fy - 230); mark("oom_facts"); await sleep(4200);
   await page.click('#beyond .chip[data-k="network"]'); mark("click_net");
   await page.waitForFunction(() => /unreachable/i.test(document.querySelector("#result")?.textContent || ""), { timeout: 20000 }); mark("net_done");
   await sleep(800);

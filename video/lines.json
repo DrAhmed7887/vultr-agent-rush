@@ -1,14 +1,70 @@
 {
- "n1": ["narr", "Ahmes is a robot classmate who is sure he's great at maths. He isn't. A child has to teach him."],
- "c1": ["child", "Look at the tenths first."],
- "n2": ["narr", "Better. But he trips when the tenths are tied. So the child spells out the whole rule, place by place."],
- "c2": ["child", "If the tenths are the same, check the next place, and if every place is the same, they're equal."],
- "n3": ["narr", "Forty out of forty. Notice the panel: the child's own words, each tied to the line of code it became. A language model on Vultr Serverless Inference compiles them literally. Say it vaguely, and he gets partly wrong code. Then plain arithmetic grades him. Never AI."],
- "n4": ["narr", "Now fractions. Some explanations are dangerous."],
- "c3": ["child", "Keep doubling both bottoms until they're the same."],
- "n5": ["narr", "That loop never ends. The container on a Vultr server was killed at three seconds, and destroyed. The app never noticed."],
- "n6": ["narr", "Try to break him. Copy your notes twice, again and again: out of memory, killed at sixty-four megabytes. Beyond the guard, call the internet: network is unreachable. And afterwards, the sandbox log says no containers are running."],
- "n7": ["narr", "Under the hood: the browser talks to Caddy, then a FastAPI app on Vultr Cloud Compute in Madrid, which starts one container per task. Every language model call goes to Vultr Serverless Inference, running qwen three point eight, twenty-seven b. Ahmes's voice is ElevenLabs, reading only his own lines. A sweeper removes strays, and every removal is verified."],
- "n8": ["narr", "In 1978, computers diagnosed children's maths bugs. Now children debug the computer."],
- "n9": ["narr", "Teach Ahmes. A prototype, built on Vultr for Agent Rush."]
+ "n1": [
+  "narr",
+  "Ahmes is a robot classmate who is sure he's great at maths. He isn't. A child has to teach him."
+ ],
+ "c1": [
+  "child",
+  "Look at the tenths first."
+ ],
+ "n2": [
+  "narr",
+  "So the child spells out the whole rule, place by place."
+ ],
+ "c2": [
+  "child",
+  "If the tenths are the same, check the next place, and if every place is the same, they're equal."
+ ],
+ "n4": [
+  "narr",
+  "Now fractions. Some explanations are dangerous."
+ ],
+ "c3": [
+  "child",
+  "Keep doubling both bottoms until they're the same."
+ ],
+ "n7": [
+  "narr",
+  "Under the hood: the browser talks to Caddy, then a FastAPI app on Vultr Cloud Compute in Madrid, which starts one container per task. Every language model call goes to Vultr Serverless Inference, running qwen three point eight, twenty-seven b. Ahmes's voice is ElevenLabs, reading only his own lines. A sweeper removes strays, and every removal is verified."
+ ],
+ "n8": [
+  "narr",
+  "In 1978, computers diagnosed children's maths bugs. Now children debug the computer."
+ ],
+ "n9": [
+  "narr",
+  "Teach Ahmes. A prototype, built on Vultr for Agent Rush."
+ ],
+ "n3a": [
+  "narr",
+  "Forty out of forty."
+ ],
+ "n3b": [
+  "narr",
+  "Look at the panel: the child's own words, each tied to the line of code it became. A language model on Vultr Serverless Inference compiles them literally. Say it vaguely, and he gets partly wrong code. Then plain arithmetic grades him. Never AI."
+ ],
+ "n5a": [
+  "narr",
+  "That loop never ends."
+ ],
+ "n5b": [
+  "narr",
+  "The container on a Vultr server was killed at three seconds, and destroyed. The app never noticed."
+ ],
+ "n6a": [
+  "narr",
+  "Now, try to break him. Copy your notes twice, again and again."
+ ],
+ "n6b": [
+  "narr",
+  "Out of memory: killed at sixty-four megabytes."
+ ],
+ "n6c": [
+  "narr",
+  "Beyond the guard, call the internet: network is unreachable."
+ ],
+ "n6d": [
+  "narr",
+  "And the sandbox log says: no containers running."
+ ]
 }

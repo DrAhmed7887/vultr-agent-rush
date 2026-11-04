@@ -1,0 +1,35 @@
+/* Shared look for slides, cover, diagram and end card: the app's squared-notebook paper. */
+:root {
+  --paper: #F7FAFD; --grid: #D9E6F3; --ink: #16224A; --muted: #4E5B80; --lapis: #2449A8;
+  --faience: #12857D; --gold: #E0A526; --wrong: #C6432A; --card: #FFFFFF; --line: #C9D7EA;
+  --code-bg: #16224A; --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { font-family: "Lexend", system-ui, sans-serif; color: var(--ink); font-size: 30px; line-height: 1.4; }
+.slide {
+  width: 1920px; height: 1080px; position: relative; overflow: hidden; padding: 84px 110px; page-break-after: always; break-after: page;
+  background-color: var(--paper);
+  background-image: linear-gradient(var(--grid) 2px, transparent 2px), linear-gradient(90deg, var(--grid) 2px, transparent 2px);
+  background-size: 48px 48px;
+}
+.slide:last-child { page-break-after: auto; break-after: auto; }
+h1, h2, h3, p { margin: 0; }
+h1 { font-size: 150px; font-weight: 800; line-height: .95; letter-spacing: -.02em; color: var(--lapis); }
+h2 { font-size: 66px; font-weight: 800; letter-spacing: -.01em; color: var(--lapis); line-height: 1.05; }
+h3 { font-size: 34px; font-weight: 700; }
+.kicker { font-size: 24px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--faience); margin-bottom: 14px; }
+.muted { color: var(--muted); }
+.card { background: var(--card); border: 3px solid var(--line); border-radius: 28px; padding: 34px 40px; }
+.gold { color: var(--gold); } .teal { color: var(--faience); } .bad { color: var(--wrong); } .lap { color: var(--lapis); }
+.foot { position: absolute; left: 110px; right: 110px; bottom: 40px; font-size: 22px; color: var(--muted); display: flex; justify-content: space-between; }
+code, .mono { font-family: var(--mono); }
+table { border-collapse: collapse; width: 100%; font-size: 27px; }
+th { text-align: left; color: var(--muted); font-weight: 500; font-size: 22px; padding: 8px 14px; border-bottom: 3px solid var(--line); }
+td { padding: 14px 14px; border-bottom: 2px solid var(--line); vertical-align: top; }
+td.r { font-weight: 800; white-space: nowrap; }
+.ahmes { overflow: visible; }
+.chest { font: 700 28px "Lexend", sans-serif; fill: #2449A8; }
+.spiral, .happy { opacity: 0; } .ring { opacity: 0; }
+.ahmes.is-happy .pupil { opacity: 0; } .ahmes.is-happy .happy { opacity: 1; }
+.pill { display: inline-block; border: 3px solid var(--line); border-radius: 999px; padding: 4px 22px; background: var(--card); font-weight: 600; }

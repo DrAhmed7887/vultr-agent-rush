@@ -52,3 +52,4 @@ dist/
 *.swo
 video/out/
 video/node_modules/
+video/work/
