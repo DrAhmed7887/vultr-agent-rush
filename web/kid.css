@@ -161,11 +161,29 @@
 }
 @keyframes slam2 { from { transform: rotate(-8deg) scale(1.6); opacity: 0; } }
 
+/* Thoth, the teacher */
+.thoth { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 18px;
+  background: color-mix(in srgb, var(--lapis) 8%, var(--card)); border: 2px solid var(--lapis); }
+.thoth[hidden] { display: none; }
+.thoth.pop-in { animation: deal .35s ease-out; }
+.thoth-face { width: 52px; height: 52px; flex: none; }
+.thoth-body { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.thoth-name { margin: 0; font-weight: 700; font-size: 14px; color: var(--lapis); }
+.thoth-say { margin: 0; font-size: 18px; line-height: 1.4; }
+.thoth .quiet { align-self: flex-start; min-height: 44px; }
+
 /* grown-ups view */
 .how { border-top: 2px solid var(--line); background: var(--paper); }
 .how-in { max-width: 1120px; margin: 0 auto; padding: 24px 16px; display: flex; flex-direction: column; gap: 20px; }
 .how-head { display: flex; flex-direction: column; gap: 6px; }
 .how-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+.how-grid > * { grid-area: auto; }   /* the old page's named areas would add phantom columns */
+.how-grid > .pipe { grid-column: 1 / -1; }
+.pipeline { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
+.pipeline li { display: grid; grid-template-columns: 11em minmax(0, 1fr) minmax(0, 1fr) 5em; gap: 10px; align-items: baseline; }
+.p-where { font-weight: 700; color: var(--lapis); } .p-who { font-family: var(--mono); font-size: 13.5px; color: var(--muted); overflow-wrap: anywhere; }
+.p-ms { text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 860px) { .pipeline li { grid-template-columns: minmax(0, 1fr) 5em; } .p-what, .p-who { grid-column: 1; } }
 .how .foot { max-width: 1120px; margin: 0 auto; padding: 0 16px 32px; }
 
 @media (max-width: 860px) {

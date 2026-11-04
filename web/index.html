@@ -115,6 +115,7 @@
         <li data-t="listen">Reading your words</li>
         <li data-t="code">Turning them into his robot code</li>
         <li data-t="box">Trying it in a safe box</li>
+        <li data-t="thoth">Thoth, the teacher, checks his code matches your words</li>
       </ol>
     </div>
 
@@ -143,6 +144,20 @@
       <button class="big" id="quiz-next" type="button" hidden>Make it his homework</button>
     </div>
 
+    <aside class="thoth" id="thoth" hidden aria-live="polite">
+      <svg class="thoth-face" viewBox="0 0 64 64" aria-hidden="true">
+        <circle cx="26" cy="30" r="20" fill="#F7FAFD" stroke="#16224A" stroke-width="3"/>
+        <path d="M10 22 Q26 4 42 22" fill="none" stroke="#2449A8" stroke-width="6" stroke-linecap="round"/>
+        <circle cx="31" cy="27" r="3.2" fill="#16224A"/>
+        <path d="M40 32 Q56 36 60 56" fill="none" stroke="#E0A526" stroke-width="5" stroke-linecap="round"/>
+      </svg>
+      <div class="thoth-body">
+        <p class="thoth-name">Thoth, the teacher</p>
+        <p class="thoth-say" id="thoth-say"></p>
+        <button class="quiet" id="thoth-act" type="button" hidden>Ask Ahmes to listen again</button>
+      </div>
+    </aside>
+
     <div class="screen" id="s-win" hidden>
       <div class="seal" aria-hidden="true">Teacher of Ahmes</div>
       <h1 class="ask" id="win-title">You taught Ahmes every trick!</h1>
@@ -167,6 +182,11 @@
         <div class="grid" id="grid" role="list"></div>
         <p class="detail" id="detail"></p>
         <p class="readout" id="readout" hidden></p>
+      </section>
+      <section class="card pipe" aria-label="This turn on Vultr">
+        <h3>This turn on Vultr</h3>
+        <p class="hint">Every AI call and every run of Ahmes's code in the last teaching turn, in order.</p>
+        <ol class="pipeline" id="pipeline"><li>Teach Ahmes something to see it here.</li></ol>
       </section>
       <section class="brain card" aria-label="Your words and Ahmes's code">
         <h3>Your words → his code</h3>
@@ -202,7 +222,7 @@
   </div>
   <footer class="foot">
     <p>Named after Ahmes, the scribe who copied the Rhind Papyrus around 1550 BC, a famous early maths text full of fractions. 3,500 years later, his robot descendant still gets them wrong.</p>
-    <p>Every AI call runs on Vultr Serverless Inference: qwen3.8-27b writes the code, Nemotron omni hears the child, Nemotron safety checks the words. Ahmes's voice is ElevenLabs, and it only ever reads his own lines. What you say or type is held in memory for 24 hours at most and isn't saved; recordings aren't kept. Please don't share personal details. A prototype; learning outcomes are untested.</p>
+    <p>Every AI call runs on Vultr Serverless Inference: qwen3.8-27b writes the code, GLM-5.3 (Thoth, the teacher) checks it against the child's words, Nemotron omni hears the child, Nemotron safety checks the words. Ahmes's voice is ElevenLabs, and it only ever reads his own lines. What you say or type is held in memory for 24 hours at most and isn't saved; recordings aren't kept. Please don't share personal details. A prototype; learning outcomes are untested.</p>
   </footer>
 </section>
 <script src="visuals.js"></script>

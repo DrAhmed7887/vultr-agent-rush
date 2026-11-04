@@ -20,6 +20,10 @@ Ahmes is a robot classmate who is sure he's great at maths. He isn't. A child ex
 4. **He tries again** on the same homework problem, and says back what he understood.
 5. **Quiz.** Brand-new problems, one card per *trick* (kind of problem). The first card he gets wrong becomes his next homework. Gold cartouches show the tricks he has learned; all of them earns the "Teacher of Ahmes" seal.
 
+**Thoth, the teacher, watches every lesson.** He's a second, open model on Vultr (GLM-5.3, a different model family from the compiler) and steps in two ways:
+- **He checks the compiler.** While the sandbox runs, Thoth compares Ahmes's new code with the child's words. If the code ignores some of the words, or does maths the child never said, he says so, quoting the missed words, and the child can tap *Ask Ahmes to listen again* (the compiler retries with Thoth's note). He checks twice in parallel and steps in only when both checks agree, and he may only quote words the child really said. On our test cases: no false alarms in 9 faithful patches, and he caught a dropped clause ("if every place is the same, they're equal") 2 times in 3.
+- **He coaches a stuck child.** After two tries on the same homework without success, Thoth asks one short question that points at the picture, for example *"Look at the picture: is Ahmes's answer bigger or smaller than 1/2 alone? Can adding more make it smaller?"* Never the rule, never the answer.
+
 His reasons are never made up by an AI: for each wrong answer the app finds which known wrong rule produces exactly that answer, and he says that rule. A trick counts as learned only when he gets every problem of that kind right in a sandboxed 40-problem test. The code, the 40-problem grid, the sandbox log and the break-him tests are in **How it works**, for grown-ups and judges.
 
 ## What happens underneath
@@ -66,6 +70,7 @@ flowchart LR
     W[sweeper: removes any box older than 10 s] -.-> S
   end
   A <-->|every LLM call| I[Vultr Serverless Inference<br/>qwen3.8-27b]
+  A <-->|checks code vs words, hints| T[Vultr Serverless Inference<br/>glm-5.3: Thoth, the teacher]
   A -->|Ahmes's own lines only| E[ElevenLabs TTS]
 ```
 
@@ -73,6 +78,7 @@ flowchart LR
 |---|---|---|
 | **Cloud Compute** | The control plane. It runs the web app and orchestrator, decides what runs, where, with which limits and for how long, and proves each container was destroyed. | `vc2-2c-4gb`, Madrid, Docker on Ubuntu 24.04, $20/month |
 | **Serverless Inference** | Every LLM call: the literal compiler that turns a child's words into code. | `qwen3.8-27b` at temperature 0, JSON output, about 1–2 s per call; `glm-5.3` if the main model's call fails |
+| **Serverless Inference (teacher)** | Thoth: checks every new brain against the child's words, and coaches a stuck child | `glm-5.3`, two checks in parallel with the sandbox, about 1.5–3 s |
 | **Serverless Inference (omni)** | Hears the child: a short recording becomes text. Told the child is explaining maths, it wrote "tenths" where Whisper and Qwen ASR heard "temps" and "tents" | `nemotron-3-nano-omni-30b-a3b-reasoning`, about 3 s |
 | **Serverless Inference (safety)** | Screens every sentence before the compiler sees it: personal details and unkind words get a gentle reply and nothing runs | `nemotron-3.5-content-safety`, runs alongside the compiler |
 | **Serverless Inference (TTS)** | Backup voice if ElevenLabs is down | `auk-flash` |
@@ -160,7 +166,7 @@ An LLM asked to "fix" fractions will quietly write the right answer whatever the
 ## Run it
 
 ```bash
-uv sync && uv run pytest -q          # 10 tests: guard, classifier, quote check, grading, trap choice, tricks
+uv sync && uv run pytest -q          # 12 tests: guard, classifier, quote check, grading, trap choice, tricks, Thoth
 deploy/deploy.sh                     # rsync to the Vultr VM, build the sandbox image, restart
 ```
 
@@ -190,7 +196,7 @@ This is a learning-by-teaching prototype. **Learning outcomes for children are u
 ## Repo map
 
 ```
-app/        main.py (API) · compiler.py · guard.py · sandbox.py · skills.py · classifier.py · replies.py · voice.py · listen.py · fixtures.py
+app/        main.py (API) · compiler.py · teacher.py · guard.py · sandbox.py · skills.py · classifier.py · replies.py · voice.py · listen.py · fixtures.py
 sandbox/    Dockerfile · runner.py        (what runs inside the throwaway container)
 web/        index.html · app.js (the child's steps) · visuals.js (number line, fraction bars) · how.js (grown-ups view) · style.css · kid.css
 spike/      spike.py + results            (gate G1)

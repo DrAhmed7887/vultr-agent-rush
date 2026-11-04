@@ -94,12 +94,13 @@ class Compiled:
     usage: dict = field(default_factory=dict)
 
 
-def _messages(current: str, sentence: str) -> list[dict]:
+def _messages(current: str, sentence: str, teacher_note: str = "") -> list[dict]:
     msgs = [{"role": "system", "content": SYSTEM}]
     for _, old, said, answer in FEW_SHOTS:
         msgs.append({"role": "user", "content": f"CURRENT CODE:\n{old}\nCHILD SAID:\n{said}"})
         msgs.append({"role": "assistant", "content": json.dumps(answer)})
-    msgs.append({"role": "user", "content": f"CURRENT CODE:\n{current}\nCHILD SAID:\n{sentence}"})
+    note = f"\nTEACHER'S NOTE ON YOUR LAST TRY: {teacher_note} Compile the child's words again, all of them, and nothing more." if teacher_note else ""
+    msgs.append({"role": "user", "content": f"CURRENT CODE:\n{current}\nCHILD SAID:\n{sentence}{note}"})
     return msgs
 
 
@@ -199,11 +200,12 @@ def _call(model: str, messages: list[dict], timeout: float) -> tuple[dict, dict,
     return json.loads(text[text.find("{"): text.rfind("}") + 1]), data.get("usage", {}), text
 
 
-def compile_sentence(current: str, sentence: str, model: str | None = None, timeout: float = 25.0) -> Compiled:
+def compile_sentence(current: str, sentence: str, model: str | None = None, timeout: float = 25.0,
+                     teacher_note: str = "") -> Compiled:
     """Two attempts: a rejected patch is retried with the reason; if the main model's call fails,
     the second attempt uses the fallback model on the same Vultr endpoint."""
     model = model or MODEL
-    messages = _messages(current, sentence)
+    messages = _messages(current, sentence, teacher_note)
     last = Compiled(False, reason="not run", model=model)
     for attempt in range(2):
         try:

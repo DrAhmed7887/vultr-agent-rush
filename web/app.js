@@ -40,6 +40,7 @@ function show(name) {
     li.toggleAttribute("aria-current", i === at);
   });
   $("stamp").hidden = name !== "oops" || !$("stamp").dataset.on;
+  $("thoth").hidden = true;
   const h = $(`s-${name}`).querySelector("h1"); if (h && name !== "think") { h.tabIndex = -1; h.focus({ preventScroll: true }); }
 }
 
@@ -94,13 +95,26 @@ function teachScreen(again) {
 
 function thinking(stage) {
   document.querySelectorAll("#think li").forEach((li) => {
-    const order = ["listen", "code", "box"], i = order.indexOf(li.dataset.t), at = order.indexOf(stage);
+    const order = ["listen", "code", "box", "thoth"], i = order.indexOf(li.dataset.t), at = order.indexOf(stage);
     li.classList.toggle("done", i < at); li.classList.toggle("now", i === at);
   });
 }
 
-async function teach() {
-  const sentence = $("sentence").value.trim();
+function thoth(t) {
+  if (!t) return;
+  $("thoth-say").textContent = t.say;
+  $("thoth-act").hidden = t.action !== "listen_again";
+  // Thoth steps in on the screen the child is looking at, just above its buttons
+  const screen = [...document.querySelectorAll(".screen")].find((el) => !el.hidden);
+  const before = screen && (screen.querySelector(".row") || screen.querySelector(".big"));
+  if (before) before.before($("thoth"));
+  $("thoth").hidden = false;
+  $("thoth").classList.remove("pop-in"); void $("thoth").offsetWidth; $("thoth").classList.add("pop-in");
+}
+
+async function teach(listenAgain) {
+  listenAgain = listenAgain === true;
+  const sentence = listenAgain ? state.lastSentence : $("sentence").value.trim();
   if (!sentence) { $("teach-err").textContent = "Tell Ahmes the rule first: talk or type it."; $("teach-err").hidden = false; $("sentence").focus(); return; }
   if (state.busy) return;
   state.busy = true;
@@ -108,14 +122,17 @@ async function teach() {
   show("think"); thinking("listen"); setRobot("is-thinking");
   const t1 = setTimeout(() => thinking("code"), 700);
   const t2 = setTimeout(() => { thinking("box"); setRobot("is-thinking", "is-running"); }, 2200);
+  const t3 = setTimeout(() => thinking("thoth"), 2900);
   try {
-    const d = await api("/api/teach", { sid: state.sid, skill: state.skill, sentence, homework: sk().homework.args });
-    clearTimeout(t1); clearTimeout(t2);
-    showTeachInHow(d, sentence, previous);
-    if (d.outcome === "partial" || d.outcome === "cured") return afterTeach(d, sentence);
-    oops(d);
+    const d = await api("/api/teach", { sid: state.sid, skill: state.skill, sentence, homework: sk().homework.args, listen_again: listenAgain });
+    clearTimeout(t1); clearTimeout(t2); clearTimeout(t3);
+    state.lastSentence = sentence;
+    showTeachInHow(d, sentence, previous, listenAgain ? 0 : state.heardMs);
+    state.heardMs = 0;
+    if (d.outcome === "partial" || d.outcome === "cured") { afterTeach(d, sentence); thoth(d.teacher); return; }
+    oops(d); thoth(d.teacher);
   } catch (e) {
-    clearTimeout(t1); clearTimeout(t2);
+    clearTimeout(t1); clearTimeout(t2); clearTimeout(t3);
     oops({ outcome: "offline", say: "Oops, my brain is offline for a moment.", reason: e.message });
   } finally { state.busy = false; }
 }
@@ -243,11 +260,12 @@ async function micToggle() {
       micUI("hearing");
       try {
         const wav = await toWav(blob);
+        const t0 = performance.now();
         const r = await fetch(`/api/listen?sid=${encodeURIComponent(state.sid)}`, { method: "POST", headers: { "Content-Type": "audio/wav" }, body: wav });
         const d = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(d.detail || "Ahmes couldn't hear that.");
         if (!d.text) throw new Error("Ahmes didn't hear any words. Try again, a bit closer.");
-        $("sentence").value = d.text; $("teach-err").hidden = true;
+        $("sentence").value = d.text; $("teach-err").hidden = true; state.heardMs = Math.round(performance.now() - t0);
         say("Did I hear you right? Fix the words if not, then press Teach Ahmes.");
       } catch (e) { $("teach-err").textContent = e.message; $("teach-err").hidden = false; }
       micUI("idle");
@@ -287,10 +305,11 @@ async function start() {
   $("mark-yes").addEventListener("click", () => markHomework(true));
   $("mark-no").addEventListener("click", () => markHomework(false));
   $("go-teach").addEventListener("click", () => ($("go-teach").dataset.next === "quiz" ? quiz() : teachScreen(false)));
-  $("teach").addEventListener("click", teach);
+  $("teach").addEventListener("click", () => teach(false));
+  $("thoth-act").addEventListener("click", () => teach(true));
   $("mic").addEventListener("click", micToggle);
   $("sentence").addEventListener("input", () => { $("teach-err").hidden = true; });
-  $("sentence").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); teach(); } });
+  $("sentence").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); teach(false); } });
   $("retry-next").addEventListener("click", () => ($("retry-next").dataset.next === "quiz" ? quiz() : teachScreen(true)));
   $("retry-why").addEventListener("click", () => {
     const hw = sk().homework; const r = { ...hw };

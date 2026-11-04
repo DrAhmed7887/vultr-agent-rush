@@ -22,7 +22,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import classifier, compiler, fixtures, guard, listen, replies, sandbox, voice
+from . import classifier, compiler, fixtures, guard, listen, replies, sandbox, teacher, voice
 from .skills import HOMEWORK, KIND, SKILLS, TRICKS, valid_problem
 from .skills import tricks as trick_table
 
@@ -101,6 +101,7 @@ class Teach(BaseModel):
     skill: str = Field(max_length=40)
     sentence: str = Field(max_length=MAX_SENTENCE)
     homework: list[int] | None = Field(default=None, max_length=6)   # the problem he retries
+    listen_again: bool = False   # recompile the last sentence with Thoth's note
 
 
 class SkillReq(BaseModel):
@@ -149,6 +150,43 @@ def _card(sk, args, case: dict | None, prefer: str = "") -> dict:
     return {"args": list(args), "kind": KIND[sk.name](args), "problem": sk.show(args),
             "his_answer": sk.show_answer(args, out) if out is not None else status,
             "out": out, "ok": out is not None and sk.grade(args, out), "why": why}
+
+
+def _timed(fn, *a):
+    t0 = time.monotonic()
+    out = fn(*a)
+    return out, int((time.monotonic() - t0) * 1000)
+
+
+def _picture(sk, args) -> str:
+    """What the picture on the child's screen shows, in words, for Thoth's hint."""
+    from .skills import dec_text, dec_truth, frac_truth
+    if sk.name == "compare_decimals":
+        a, b, tr = dec_text(*args[:3]), dec_text(*args[3:]), dec_truth(args)
+        return f"{a} and {b} land on the same spot on the number line" if tr == 0 else \
+            f"{a if tr == 1 else b} is further along the number line"
+    tv = frac_truth(args)
+    return f"fraction bars: really it is {tv.numerator}/{tv.denominator}"
+
+
+def _thoth(sk, hw, attempts: list, retry: dict | None, outcome: str, aud: dict | None = None) -> dict | None:
+    """When Thoth steps in. 1) The code doesn't match the child's words. 2) The child is stuck:
+    two or more tries on this homework and it's still wrong (or he keeps getting dizzy)."""
+    if aud and aud.get("faithful") is False:
+        if aud["missed"]:
+            say = f"I'm Thoth, the teacher. Ahmes didn't use all of your words. He missed: “{aud['missed']}”."
+            note = f"Your code ignored these words of the child: \"{aud['missed']}\"."
+        else:
+            say = f"I'm Thoth, the teacher. Ahmes did more than you said: he {aud['added']}."
+            note = f"Your code did something the child never said: {aud['added']}."
+        return {"kind": "audit", "say": say, "note": note, "action": "listen_again"}
+    stuck = len(attempts) >= 2 and (outcome in ("timeout", "oom") or (retry is not None and not retry["ok"]))
+    if stuck and hw:
+        his = retry or {"his_answer": "he got dizzy" if outcome == "timeout" else "his head got too full", "why": ""}
+        h = teacher.hint(sk.show(hw), his["his_answer"], his.get("why", ""), attempts, _picture(sk, hw))
+        if h:
+            return {"kind": "hint", "say": h}
+    return None
 
 
 _start: dict[str, dict] = {}
@@ -204,7 +242,14 @@ def new_session(request: Request) -> dict:
 def teach(t: Teach, request: Request) -> dict:
     _limit(request)
     s, sk = _session(t.sid), _skill(t.skill)
-    sentence = " ".join(t.sentence.split())
+    last = s.setdefault("last", {}).get(sk.name) or {}
+    note = ""
+    if t.listen_again:
+        if not last.get("note"):
+            raise HTTPException(400, "Nothing for Ahmes to listen to again.")
+        sentence, note = last["sentence"], last["note"]
+    else:
+        sentence = " ".join(t.sentence.split())
     if not sentence:
         raise HTTPException(400, "Type what Ahmes should do.")
     current = s["brains"][sk.name]
@@ -217,11 +262,11 @@ def teach(t: Teach, request: Request) -> dict:
     hw = tuple(t.homework) if t.homework else None
     if hw is not None and not valid_problem(sk.name, hw):
         raise HTTPException(400, "Bad homework problem")
-    safety = _pool.submit(listen.safe, sentence)
-    comp = compiler.compile_sentence(current, sentence)
+    safety = _pool.submit(_timed, listen.safe, sentence)
+    comp = compiler.compile_sentence(current, sentence, teacher_note=note)
     mark("compile", model=comp.model, ok=comp.ok, tokens=comp.usage.get("total_tokens"))
-    verdict = safety.result(timeout=15)
-    mark("safety", verdict=verdict)
+    verdict, safety_ms = safety.result(timeout=15)
+    mark("safety", verdict=verdict, model=listen.SAFETY_MODEL, took_ms=safety_ms)
     if verdict == "unsafe":   # personal details or unkind words: nothing is compiled or run
         line = replies.FIXED["unkind"]
         return {"outcome": "unkind", "say": line, "voice": voice.speak(line), "timeline": timeline, "code": current}
@@ -239,9 +284,15 @@ def teach(t: Teach, request: Request) -> dict:
         return {"outcome": "blocked", "say": line, "voice": voice.speak(line), "reason": g.reason,
                 "steps": comp.steps, "proposed": comp.code, "timeline": timeline, "code": current}
 
+    watch = _pool.submit(teacher.audit, sentence, current, comp.code, comp.steps)   # Thoth checks while the sandbox runs
     grade, run, probs = _check(sk, comp.code, s["seed"], "teach", [hw] if hw else None)
     run_id = _log_run("teach", run)
     mark("sandbox", verdict=run.verdict, elapsed_ms=run.elapsed_ms, run_id=run_id)
+    aud = watch.result(timeout=25)
+    mark("teacher", model=aud["model"], took_ms=aud["ms"], faithful=aud["faithful"])
+    attempts = s.setdefault("attempts", {}).setdefault(f"{sk.name}:{hw}", [])
+    if not t.listen_again:
+        attempts.append(sentence)
     statuses = {c.get("status") for c in run.cases if c.get("i", 0) < 40}
     if run.verdict == "TIMEOUT" or "dizzy" in statuses:
         outcome = "timeout"
@@ -251,7 +302,9 @@ def teach(t: Teach, request: Request) -> dict:
         outcome = ""
     if outcome:   # stopped by the container limit or the per-case timer inside it: don't keep this brain
         line = replies.FIXED["dizzy" if outcome == "timeout" else "too_full"]
-        return {"outcome": outcome, "say": line, "voice": voice.speak(line), "steps": comp.steps,
+        s["last"][sk.name] = {"sentence": sentence}
+        th = _thoth(sk, hw, attempts, None, outcome)
+        return {"outcome": outcome, "say": line, "teacher": th, "audit": aud, "voice": voice.speak(line), "steps": comp.steps,
                 "proposed": comp.code, "grade": grade, "run": {"id": run_id, **run.receipt, "verdict": run.verdict},
                 "timeline": timeline, "code": current}
     if run.verdict != "OK" or any(c.get("i") == -1 for c in run.cases):
@@ -270,10 +323,14 @@ def teach(t: Teach, request: Request) -> dict:
     retry = _card(sk, hw, by_i.get(40), cls["behaves_like"]) if hw else None
     if retry:
         retry["voice"] = voice.speak(retry["why"])
+    th = _thoth(sk, hw, attempts, retry, "", aud)
+    s["last"][sk.name] = {"sentence": sentence, "note": th.get("note", "") if th else ""}
+    if th and th.get("kind") == "audit":
+        mark("teacher_steps_in", why="code doesn't match the words")
     mark("reply")
     return {"outcome": "cured" if grade["right"] == grade["total"] else "partial", "say": line, "voice": voice.speak(line),
             "steps": comp.steps, "code": comp.code, "previous": current, "grade": grade, "read_out": cls,
-            "retry": retry, "tricks": trick_table(sk.name, probs, [r["ok"] for r in grade["rows"]]),
+            "retry": retry, "teacher": th, "audit": aud, "tricks": trick_table(sk.name, probs, [r["ok"] for r in grade["rows"]]),
             "run": {"id": run_id, **run.receipt, "verdict": run.verdict}, "timeline": timeline}
 
 

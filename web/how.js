@@ -127,7 +127,8 @@ function setupHow() {
 }
 
 // After any teach turn, show the grown-up view of it.
-function showTeachInHow(d, sentence, previous) {
+function showTeachInHow(d, sentence, previous, heardMs) {
+  renderPipeline(d.timeline, heardMs);
   if (d.proposed || d.code) renderCode(d.proposed || d.code, previous);
   renderWords(sentence, d.steps || []);
   if (d.grade) renderGrid(d.grade);
@@ -143,4 +144,26 @@ function showTeachInHow(d, sentence, previous) {
     d.outcome === "unkind" ? "Nemotron safety stopped the sentence before the compiler saw it." :
     d.outcome === "rejected" ? `Nothing changed: ${d.reason || "the compiler's patch was rejected"}.` : "";
   refreshLog();
+}
+
+// The last teaching turn as a list of Vultr calls: which model or machine, what it did, how long.
+const STAGE = {
+  hear: ["Serverless Inference", "heard the child"], safety: ["Serverless Inference", "checked the words were safe"],
+  compile: ["Serverless Inference", "turned the words into code"], guard: ["Cloud Compute VM", "code guard read the code"],
+  sandbox: ["Cloud Compute VM", "ran it in a throwaway container"], teacher: ["Serverless Inference", "Thoth checked the code matches the words"],
+};
+function renderPipeline(timeline, heardMs) {
+  const rows = [];
+  if (heardMs) rows.push(["hear", "nemotron-3-nano-omni", `${heardMs} ms`]);
+  let prev = 0;
+  (timeline || []).forEach((t) => {
+    const took = t.took_ms ?? t.elapsed_ms ?? (t.ms - prev);
+    prev = t.ms;
+    if (!STAGE[t.stage]) return;
+    const who = t.model || (t.stage === "sandbox" ? `container, ${t.verdict}` : t.stage === "guard" ? (t.ok ? "passed" : "blocked") : "");
+    const extra = t.stage === "safety" ? ` (${t.verdict})` : t.stage === "teacher" ? (t.faithful === false ? " (stepped in)" : t.faithful ? " (matches)" : " (couldn't check)") : "";
+    rows.push([t.stage, who + extra, `${took} ms`]);
+  });
+  $("pipeline").innerHTML = rows.map(([st, who, ms]) => `<li><span class="p-where">${esc(STAGE[st][0])}</span>
+    <span class="p-what">${esc(STAGE[st][1])}</span><span class="p-who">${esc(who)}</span><span class="p-ms">${esc(ms)}</span></li>`).join("");
 }

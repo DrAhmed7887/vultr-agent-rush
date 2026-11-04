@@ -111,3 +111,34 @@ def test_tricks_and_his_reasons():
     assert explain("add_fractions", (1, 2, 1, 3), [2, 5]).startswith("I add the tops and add the bottoms")
     assert valid_problem(sk.name, (0, 45, 2, 0, 5, 1)) and not valid_problem(sk.name, (0, 450, 2, 0, 5, 1))
     assert not valid_problem("add_fractions", (1, 0, 1, 3))
+
+
+def test_thoth_steps_in_only_when_both_checks_agree(monkeypatch):
+    from app import teacher
+    said = "If the tenths are the same, check the next place, and if every place is the same, they're equal."
+    answers = iter([{"faithful": False, "missed": "if every place is the same, they're equal", "added": "", "ms": 5},
+                    {"faithful": True, "missed": "", "added": "", "ms": 6}])
+    monkeypatch.setattr(teacher, "_audit_once", lambda user, sentence: next(answers))
+    assert teacher.audit(said, "", "")["faithful"] is True            # one noisy check is not enough
+    both = {"faithful": False, "missed": "if every place is the same, they're equal", "added": "", "ms": 5}
+    monkeypatch.setattr(teacher, "_audit_once", lambda user, sentence: dict(both))
+    a = teacher.audit(said, "", "")
+    assert a["faithful"] is False and a["missed"].startswith("if every place")
+    # a quote the child never said is dropped
+    monkeypatch.setattr(teacher, "_audit_once", lambda user, sentence: None)
+    assert teacher.audit(said, "", "")["faithful"] is None
+
+
+def test_thoth_hints_only_when_stuck(monkeypatch):
+    from app import main, teacher
+    from app.skills import SKILLS
+    sk = SKILLS["compare_decimals"]
+    monkeypatch.setattr(teacher, "hint", lambda *a: "Look at the picture again: which one is further along?")
+    hw = (0, 606, 3, 0, 61, 2)
+    wrong = {"ok": False, "his_answer": "0.606 is bigger", "why": "x"}
+    assert main._thoth(sk, hw, ["one try"], wrong, "", {"faithful": True}) is None
+    assert main._thoth(sk, hw, ["one", "two"], wrong, "", {"faithful": True})["kind"] == "hint"
+    assert main._thoth(sk, hw, ["one", "two"], {**wrong, "ok": True}, "", {"faithful": True}) is None
+    audit = {"faithful": False, "missed": "they're equal", "added": ""}
+    t = main._thoth(sk, hw, ["one"], wrong, "", audit)
+    assert t["kind"] == "audit" and t["action"] == "listen_again" and "they're equal" in t["say"]

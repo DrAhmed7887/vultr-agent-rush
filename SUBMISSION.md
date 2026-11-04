@@ -25,9 +25,9 @@ Judges can try to break him from the page:
 - **Beyond-the-guard tests** show: network unreachable, the root filesystem read-only, no secrets in the environment, and a fork bomb capped at 30 processes. Receipts record the configured limits and the observed clean-up.
 - **Every run leaves a downloadable JSON receipt** with the limits read back from `docker inspect`.
 
-Ahmes's voice is ElevenLabs. It only ever reads his own lines. He is named after Ahmes, who copied the Rhind Papyrus around 1550 BC. A prototype; learning outcomes are untested.
+A second open model, Thoth the teacher (GLM-5.3 on Vultr), watches every lesson: it checks that Ahmes's new code matches the child's words, and asks a stuck child a short question that points at the picture, never the answer. The child talks to Ahmes through Vultr's Nemotron omni model, and Nemotron content safety screens every sentence first. Five Vultr models and one Vultr VM run the whole lesson. Ahmes's voice is ElevenLabs. It only ever reads his own lines. He is named after Ahmes, who copied the Rhind Papyrus around 1550 BC. A prototype; learning outcomes are untested.
 
-**Technology tags:** Vultr Cloud Compute, Vultr Serverless Inference, qwen3.8-27b, Docker, Python, FastAPI, Caddy, ElevenLabs, sandboxing, education
+**Technology tags:** Vultr Cloud Compute, Vultr Serverless Inference, qwen3.8-27b, GLM-5.3, Nemotron omni, Nemotron safety, Docker, Python, FastAPI, Caddy, ElevenLabs, sandboxing, education
 **Category tags:** Education, AI agents, Sandboxing, Safety
 
 **Links:**
