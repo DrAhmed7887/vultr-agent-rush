@@ -1,1 +1,137 @@
-<!doctype html><title>Teach Ahmes</title><p>loading</p>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Teach Ahmes</title>
+<meta name="description" content="Ahmes is a robot who thinks he's great at maths. Teach him in your own words and watch your words become his code, tested safely in a sandbox on Vultr.">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2449A8">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="page">
+  <header class="masthead">
+    <h1>Teach Ahmes</h1>
+    <p class="lede">Ahmes is a robot who thinks he's great at maths. He isn't. Explain the rule in your own words, and watch your words become his code.</p>
+    <div class="skills" role="tablist" aria-label="What Ahmes is learning">
+      <button class="skill" role="tab" id="tab-compare_decimals" data-skill="compare_decimals" aria-selected="true">Which decimal is bigger?</button>
+      <button class="skill" role="tab" id="tab-add_fractions" data-skill="add_fractions" aria-selected="false">Adding fractions</button>
+    </div>
+  </header>
+
+  <section class="stage" aria-label="Ahmes">
+   <div class="stage-in">
+    <div class="robot-wrap">
+      <svg id="ahmes" class="ahmes" viewBox="0 0 240 280" role="img" aria-label="Ahmes the robot">
+        <defs>
+          <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#7FF3E6"/><stop offset="100%" stop-color="#1FA39A"/>
+          </radialGradient>
+        </defs>
+        <g class="bob">
+          <!-- antenna: a reed pen, the scribe's tool -->
+          <line x1="120" y1="38" x2="120" y2="14" stroke="#16224A" stroke-width="4" stroke-linecap="round"/>
+          <path d="M114 16 L120 2 L126 16 Z" fill="#E0A526"/>
+          <!-- head with striped scribe's headdress -->
+          <g class="head">
+            <path d="M58 70 Q60 40 120 38 Q180 40 182 70 L192 128 Q170 120 166 104 L74 104 Q70 120 48 128 Z" fill="#2449A8"/>
+            <path d="M62 78 L52 120 M74 72 L64 118 M166 72 L176 118 M178 78 L188 120" stroke="#E0A526" stroke-width="5" stroke-linecap="round" opacity=".95"/>
+            <rect x="72" y="52" width="96" height="70" rx="22" fill="#16224A"/>
+            <g class="eyes">
+              <g class="eye eye-l"><circle class="pupil" cx="100" cy="84" r="9" fill="url(#glow)"/>
+                <path class="spiral" d="M100 84 m0 0 a2 2 0 1 1 3 0 a5 5 0 1 1 -8 0 a8 8 0 1 1 13 0" fill="none" stroke="#7FF3E6" stroke-width="2.4"/>
+                <path class="happy" d="M91 87 Q100 76 109 87" fill="none" stroke="#7FF3E6" stroke-width="4" stroke-linecap="round"/></g>
+              <g class="eye eye-r"><circle class="pupil" cx="140" cy="84" r="9" fill="url(#glow)"/>
+                <path class="spiral" d="M140 84 m0 0 a2 2 0 1 1 3 0 a5 5 0 1 1 -8 0 a8 8 0 1 1 13 0" fill="none" stroke="#7FF3E6" stroke-width="2.4"/>
+                <path class="happy" d="M131 87 Q140 76 149 87" fill="none" stroke="#7FF3E6" stroke-width="4" stroke-linecap="round"/></g>
+            </g>
+            <path class="mouth" d="M108 106 Q120 113 132 106" fill="none" stroke="#7FF3E6" stroke-width="3.5" stroke-linecap="round"/>
+          </g>
+          <!-- body -->
+          <rect x="78" y="134" width="84" height="88" rx="18" fill="#2449A8"/>
+          <rect x="94" y="150" width="52" height="40" rx="8" fill="#F7FAFD"/>
+          <text class="chest" x="120" y="177" text-anchor="middle">½</text>
+          <circle cx="104" cy="204" r="5" fill="#E0A526"/><circle cx="120" cy="204" r="5" fill="#1FA39A"/><circle cx="136" cy="204" r="5" fill="#E0A526"/>
+          <path class="arm arm-l" d="M80 150 Q56 170 60 198" fill="none" stroke="#2449A8" stroke-width="12" stroke-linecap="round"/>
+          <path class="arm arm-r" d="M160 150 Q184 170 180 198" fill="none" stroke="#2449A8" stroke-width="12" stroke-linecap="round"/>
+          <rect x="92" y="222" width="18" height="34" rx="6" fill="#16224A"/><rect x="130" y="222" width="18" height="34" rx="6" fill="#16224A"/>
+        </g>
+        <circle class="ring" cx="120" cy="88" r="74" fill="none" stroke="#E0A526" stroke-width="6" stroke-linecap="round" pathLength="100"/>
+      </svg>
+      <div class="stamp" id="stamp" hidden>Stopped by the sandbox<br><span id="stamp-time">3.0 s</span></div>
+    </div>
+
+    <div class="talk">
+      <p class="bubble" id="bubble" aria-live="polite">Hi, I'm Ahmes!</p>
+      <button class="sound" id="sound" type="button" aria-pressed="true" title="Ahmes's voice on or off">Voice on</button>
+      <p class="status" id="status" aria-live="polite"></p>
+    </div>
+   </div>
+  </section>
+
+  <section class="teach card" aria-label="Teach Ahmes">
+    <label for="sentence" class="h2">Tell Ahmes the rule</label>
+    <textarea id="sentence" rows="3" maxlength="500" placeholder="Look at the tenths first…"></textarea>
+    <div class="starters" id="starters" aria-label="Ideas to try"></div>
+    <div class="actions">
+      <button class="primary" id="teach" type="button">Teach Ahmes</button>
+      <button class="secondary" id="quiz" type="button">Quiz Ahmes</button>
+      <button class="ghost" id="reset" type="button">Start him over</button>
+    </div>
+  </section>
+
+  <section class="sheet card" aria-label="Ahmes's test">
+    <div class="sheet-head">
+      <h2 class="h2">Ahmes's test</h2>
+      <p class="score" id="score">Not tested yet</p>
+    </div>
+    <p class="hint">40 problems, checked by plain arithmetic, never by AI. Tap a square to see what he answered.</p>
+    <div class="grid" id="grid" role="list"></div>
+    <p class="detail" id="detail"></p>
+    <p class="readout" id="readout" hidden></p>
+  </section>
+
+  <section class="brain card" aria-label="Your words and Ahmes's code">
+    <h2 class="h2">Your words → his code</h2>
+    <p class="said" id="said">Teach him something and your words will appear here, linked to the code they became.</p>
+    <ol class="steps" id="steps"></ol>
+    <pre class="code" id="code" aria-label="Ahmes's code"></pre>
+  </section>
+
+  <section class="hood" aria-label="Under the hood">
+    <div class="hood-head">
+      <h2 class="h2">Under the hood: how Vultr keeps Ahmes safe</h2>
+      <p class="hint">Every time Ahmes learns, his new code runs in a brand-new container on a Vultr server in Madrid: no internet, no secrets, 64 MB of memory, 3 seconds at most. Then the container is destroyed.</p>
+    </div>
+
+    <div class="hood-grid">
+      <div class="card">
+        <h3>Try to break Ahmes</h3>
+        <p class="hint">Bad advice goes through the same code guard and the same sandbox as a child's turn. A normal maths check runs at the same time to show the server keeps working.</p>
+        <div class="chips" id="chips"></div>
+        <h3>Beyond the guard</h3>
+        <p class="hint">These skip the code guard on purpose, to prove the container holds on its own.</p>
+        <div class="chips" id="beyond"></div>
+        <div class="result" id="result" hidden></div>
+      </div>
+      <div class="card">
+        <h3>Sandbox log</h3>
+        <p class="hint" id="live">Containers running now: checking…</p>
+        <div class="log-wrap"><table class="log"><thead><tr><th>Time</th><th>Task</th><th>Result</th><th>ms</th><th>Removed</th><th>Receipt</th></tr></thead><tbody id="log"></tbody></table></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <p>Named after Ahmes, the scribe who copied the Rhind Papyrus around 1550 BC, the oldest surviving maths book with fractions in it. 3,500 years later, his robot descendant still gets them wrong.</p>
+    <p>Every AI call runs on Vultr Serverless Inference (qwen3.8-27b). Ahmes's voice is ElevenLabs, and it only ever reads his own lines. What you type stays in memory for 24 hours at most and is never saved to disk. A prototype; learning outcomes are untested.</p>
+  </footer>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
