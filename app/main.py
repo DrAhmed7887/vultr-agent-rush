@@ -67,7 +67,17 @@ def _session(sid: str) -> dict:
         return s
 
 
+GLOBAL_PER_MIN = {"teach": 120, "quiz": 120, "chip": 60, "beyond": 60, "session": 300}
+
+
 def _limit(request: Request, per_min: int = 20, bucket: str = "teach") -> None:
+    now = time.time()
+    g = _rate.setdefault(f"global:{bucket}", deque())
+    while g and now - g[0] > 60:
+        g.popleft()
+    if len(g) >= GLOBAL_PER_MIN.get(bucket, 120):
+        raise HTTPException(429, "Ahmes is very busy right now. Try again in a minute.")
+    g.append(now)
     ip = request.client.host if request.client else "?"
     q = _rate.setdefault(f"{bucket}:{ip}", deque())
     now = time.time()

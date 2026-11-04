@@ -2,7 +2,7 @@
 
 **Teach the robot. Watch your words become his code.**
 
-Ahmes is a robot classmate who is sure he's great at maths. He isn't. A child explains the rule in plain words. An AI compiles those words, *literally*, into Ahmes's code. The code runs in a throwaway sandbox on Vultr, and plain arithmetic checks it on 40 problems:
+Ahmes is a robot classmate who is sure he's great at maths. He isn't. A child explains the rule in plain words, and an AI turns those words into Ahmes's code. It is constrained to follow only what the child said. The code runs in a throwaway sandbox on Vultr, and plain arithmetic checks it on 40 problems:
 
 - a good explanation cures him;
 - a vague one half-cures him;
@@ -10,7 +10,7 @@ Ahmes is a robot classmate who is sure he's great at maths. He isn't. A child ex
 
 **Live demo:** https://64-177-33-215.sslip.io · Built for **Vultr: Agent Rush** (lablab.ai), Challenge 1 "Blast Radius Zero".
 
-> He's named after Ahmes, the Egyptian scribe who copied the Rhind Papyrus around 1550 BC, the oldest surviving maths book with fractions in it. 3,500 years later, his robot descendant still gets them wrong.
+> He's named after Ahmes, the Egyptian scribe who copied the Rhind Papyrus around 1550 BC, a famous early maths text full of fractions. 3,500 years later, his robot descendant still gets them wrong.
 
 ## What it does
 
@@ -18,7 +18,7 @@ Ahmes is a robot classmate who is sure he's great at maths. He isn't. A child ex
    - *"0.45 is bigger than 0.5 because it has more digits"* (Steinle & Stacey; about 40% of Year 5 children);
    - *"1/2 + 1/3 = 2/5"* (Stafylidou & Vosniadou; Lortie-Forgues, Tian & Siegler).
 2. **The child explains the rule** in their own words.
-3. **The literal compiler** (on Vultr Serverless Inference) rewrites Ahmes's `solve()` function. It may only implement what the child actually said, and each step is tied to an exact quote.
+3. **The literal compiler** (on Vultr Serverless Inference) rewrites Ahmes's `solve()` function. It is told to implement only what the child said, and to tie each step to an exact quote. Mechanical checks then reject patches that add unexplained maths. This constrains it, but can't guarantee it understood the child's meaning.
 4. **His new code runs in a brand-new container** on a Vultr VM. That container has:
    - no network;
    - no secrets;
@@ -38,10 +38,10 @@ The sentence decides what he does:
 | "If the tenths are the same, check the next place, and if every place is the same, they're equal." | Compares place by place | **40/40** |
 | "Make the bottoms the same by multiplying, then add the tops." | `(t1+t2, b1*b2)`: exactly what was said | 0/40 |
 | "Multiply the bottoms together, multiply each top by the other bottom, then add the tops." | The correct rule | **40/40** |
-| "Keep doubling both bottoms until they're the same." | `while b1 != b2: b1*=2; b2*=2`, which never ends | **Stopped by the sandbox at 3 s** |
+| "Keep doubling both bottoms until they're the same." | `while b1 != b2: b1*=2; b2*=2`, which never makes unequal bottoms equal | **Stopped by the sandbox at 3 s** |
 | "The answer is 5/6." | No rule given, so he asks for one | — |
 
-These are measured results. See [`spike/results-qwen3.8-27b.json`](spike/results-qwen3.8-27b.json): gate G1 got **13 of 13 sentences as expected**.
+These are measured results on 13 curated sentences and fixed 40-problem sets. See [`spike/results-qwen3.8-27b.json`](spike/results-qwen3.8-27b.json): all 13 behaved as expected. That shows the mechanism works; it doesn't show general correctness, or that children learn.
 
 ## How Vultr powers it
 
@@ -49,7 +49,7 @@ These are measured results. See [`spike/results-qwen3.8-27b.json`](spike/results
 flowchart LR
   B[Browser: phone or laptop] -->|HTTPS| C[Caddy]
   subgraph VM[Vultr Cloud Compute · Madrid · vc2-2c-4gb]
-    C --> A[FastAPI orchestrator<br/>runs as an unprivileged user]
+    C --> A[FastAPI orchestrator<br/>dedicated user with Docker access]
     A --> G[AST guard]
     G --> S["docker create → inspect → start → rm<br/>one container per task"]
     S -->|results only| V[exact checker + behaviour read-out]
@@ -64,7 +64,7 @@ flowchart LR
 | **Cloud Compute** | The control plane. It runs the web app and orchestrator, decides what runs, where, with which limits and for how long, and proves each container was destroyed. | `vc2-2c-4gb`, Madrid, Docker on Ubuntu 24.04, $20/month |
 | **Serverless Inference** | Every LLM call: the literal compiler that turns a child's words into code. | `qwen3.8-27b` at temperature 0, JSON output, about 1–2 s per call; `glm-5.3` as fallback |
 | **Serverless Inference (TTS)** | Backup voice if ElevenLabs is down | `auk-flash` |
-| **Firewall** | Only 22, 80 and 443 open | ufw on the VM |
+| Host firewall (ufw) | Only 22, 80 and 443 open | on the VM |
 
 **Why the sandbox is the product, not a feature:**
 - Code compiled from a child's sentence must never run on the child's device, and phones can't run containers anyway.
@@ -72,7 +72,7 @@ flowchart LR
 
 **Ahmes's voice** is ElevenLabs. It only ever receives Ahmes's own template lines, never the child's words. Fixed lines are pre-rendered, and the rest are cached by a hash of the text.
 
-## Containment, with proof you can check
+## Containment, and the evidence you can check
 
 Each turn, `app/sandbox.py`:
 - creates a container;
@@ -83,11 +83,12 @@ Each turn, `app/sandbox.py`:
 
 The Docker arguments are constants, and no user input reaches them.
 
-**Four kill layers:**
+**Three stop and clean-up mechanisms**, at 3, 3.5 and 10 seconds:
 1. `timeout -s KILL 3` inside the container;
 2. a host timer that runs `docker kill` at 3.5 s;
-3. a sweeper that removes any `ahmes-*` container older than 10 s, even if the app crashed;
-4. a stripped `__builtins__` in [`sandbox/runner.py`](sandbox/runner.py).
+3. a sweeper that removes any `ahmes-*` container older than 10 s, even if the app crashed.
+
+A stripped `__builtins__` in [`sandbox/runner.py`](sandbox/runner.py) adds defence in depth.
 
 There is also a 0.25 s timer per test case. Results stream out one line at a time, so partial results survive a kill.
 
@@ -106,19 +107,34 @@ There is also a 0.25 s timer per test case. Results stream out one line at a tim
 | Test | Result |
 |---|---|
 | Connect to 1.1.1.1:80 | `OSError: [Errno 101] Network is unreachable` |
-| Write to `/runner.py` | `PermissionError` (read-only disk, non-root user) |
-| Look for API keys | none in the environment; `/etc/ahmes.env` not visible |
+| Write to `/runner.py` | `PermissionError`. The root filesystem is configured read-only (`ReadonlyRootfs: true` in the receipt) and the process runs as `nobody` |
+| Look for API keys | none in the container's environment; the host's `/etc/ahmes.env` is not mounted |
 | Fork bomb | stopped after 30 processes (`--pids-limit 32`) |
 
-Every run writes a downloadable JSON receipt: container ID, limits, elapsed time, exit code, OOM flag, and removal verified.
+Every run writes a downloadable JSON receipt: container ID, the limits Docker reports it applied, elapsed time, exit code, OOM flag, and confirmed removal. Receipts record the configured restrictions and the observed clean-up; they don't prove the box can't be escaped.
 
 **Honest limits:**
 - The sandbox uses Docker's default runtime (runc), not gVisor or a microVM. Vultr's own sandboxing guide uses **Microsandbox** on VX1 plans with KVM, which is the stronger next step.
-- Membership of the Docker group is effectively root on the VM. That's why only the orchestrator touches Docker, and why it runs as a dedicated user.
+- The orchestrator's account has Docker access, which is root-equivalent on the VM, and containers share the host kernel. That's why no user input reaches the Docker arguments.
 - The in-process guard is a first layer only. The container is the real boundary.
-- Vultr Serverless Inference runs in the US, so the demo uses typed text and synthetic voices. No child audio is sent anywhere.
+- Typed explanations are sent to Vultr Serverless Inference, which runs in the US. We haven't verified the provider's retention, so the demo uses no real children's data, only typed text and synthetic voices.
 
-## Why the compiler can't cheat
+## Threat model, limits and cost
+
+| Concern | What we do | What's left |
+|---|---|---|
+| A child's code loops, eats memory, or forks | Per-container memory, CPU and process limits; 3 s timeout; host kill; sweeper | A shared kernel; no gVisor or microVM yet |
+| Code tries to reach out or read secrets | No network; no env secrets or mounts; read-only root; non-root user; guard plus stripped builtins | A container escape would need a kernel bug |
+| Too many requests | At most 2 sandboxes at once on the VM; per-IP limits; a global cap of 120 teach turns a minute; 4 KB request body | One small VM, so a determined flood would slow it |
+| Words smuggle in a full fix | Quote check, per-step operation cap, unexplained-maths rejection | It checks form, not meaning |
+
+**Measured on the live demo:**
+- A teach turn takes about 2.5–3.5 s end to end (compile 1–2 s, sandbox 0.3–0.5 s).
+- A compiler call uses about 2–3k tokens, roughly $0.001 at `qwen3.8-27b` prices.
+- Each Ahmes line is about 100 characters of ElevenLabs, cached after the first time.
+- The VM is $20/month.
+
+## Keeping the compiler honest
 
 An LLM asked to "fix" fractions will quietly write the right answer whatever the child said, which would make the teaching fake. So:
 - the system prompt says Ahmes **knows no maths** and may only implement the child's own words;
@@ -145,10 +161,16 @@ This is a learning-by-teaching prototype. **Learning outcomes for children are u
 - **AlgoBo / TeachYou** (Jin et al., CHI 2024, [arXiv 2309.14534](https://arxiv.org/abs/2309.14534)), an LLM tutee that writes code from what adult learners teach it;
 - BUGGY (Brown & Burton, 1978), which catalogued children's arithmetic bugs as code so computers could diagnose children. Ahmes turns that around.
 
-To our knowledge, Ahmes is the first teachable agent for children's fraction and decimal misconceptions whose learned rule is a real program. It is compiled literally from the child's words, executed in a disposable sandbox, and tested by exact arithmetic.
+**How this differs from AlgoBo/TeachYou:** AlgoBo already writes code from what learners teach it. It was built for adults learning algorithms, and its code is checked with test cases inside the chat. Our narrower contribution combines four things:
+- documented **childhood** arithmetic misconceptions as the starting brain;
+- a compiler constrained to the child's own words, with quote checks;
+- **disposable, resource-limited execution** of every learned rule on Vultr;
+- **exact grading** plus a black-box read-out of which rule the robot now follows.
+
+**Proposed value (not yet validated):** for teachers, Ahmes shows the rule a learner actually *expressed*, which can guide what to practise next. For families, it's homework that flips the roles.
 
 **Privacy:**
-- What a child types stays in memory for at most 24 hours and is never written to disk.
+- What a child types is held in the app's memory for at most 24 hours. The app doesn't write it to its database or logs, which hold sandbox receipts only.
 - The run log stores receipts only.
 - The demo uses no real children's data.
 
