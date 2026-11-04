@@ -58,15 +58,20 @@ function renderCode(code, previous) {
 
 function renderWords(sentence, steps) {
   if (!steps || !steps.length) { $("said").textContent = sentence || "Teach him something and your words will appear here, linked to the code they became."; $("steps").innerHTML = ""; return; }
-  let html = esc(sentence);
+  // find each quote in the plain sentence first, then escape, so a quote can never match inside a tag
+  const low = sentence.toLowerCase(), spans = [];
   steps.forEach((st, i) => {
-    const q = esc(st.quote || "");
-    if (q && html.toLowerCase().includes(q.toLowerCase())) {
-      const at = html.toLowerCase().indexOf(q.toLowerCase());
-      html = html.slice(0, at) + `<mark data-step="${i}">` + html.slice(at, at + q.length) + "</mark>" + html.slice(at + q.length);
-    }
+    const q = (st.quote || "").toLowerCase();
+    const at = q ? low.indexOf(q) : -1;
+    if (at >= 0 && !spans.some((s) => at < s.end && at + q.length > s.at)) spans.push({ at, end: at + q.length, i });
   });
-  $("said").innerHTML = html;
+  spans.sort((a, b) => a.at - b.at);
+  let html = "", pos = 0;
+  spans.forEach((s) => {
+    html += esc(sentence.slice(pos, s.at)) + `<mark data-step="${s.i}">` + esc(sentence.slice(s.at, s.end)) + "</mark>";
+    pos = s.end;
+  });
+  $("said").innerHTML = html + esc(sentence.slice(pos));
   $("steps").innerHTML = steps.map((st, i) => `<li data-step="${i}"><q>${esc(st.quote)}</q> became <code>${esc(st.code)}</code></li>`).join("");
   const codeLines = [...$("code").querySelectorAll(".ln")];
   const link = (i, on) => {
@@ -161,7 +166,7 @@ async function teach() {
     setRobot("is-confused");
     if (d.outcome === "blocked") { renderCode(d.proposed || d.code); renderWords(sentence, d.steps); }
     say(d.say, d.voice);
-    $("status").textContent = d.outcome === "blocked" ? `The code guard refused it: ${d.reason}.` : d.outcome === "rejected" ? "The compiler heard more than you said, so nothing changed." : "";
+    $("status").textContent = d.outcome === "blocked" ? `The code guard refused it: ${d.reason}.` : d.outcome === "rejected" ? (["BUSY", "ERROR", "OTHER_KILL", "OK"].includes(d.reason) ? "The sandbox couldn't test that brain, so nothing changed. Try again." : "The compiler heard more than you said, so nothing changed.") : "";
   } catch (e) {
     clearTimeout(t1); setRobot("is-confused"); say("Oops, my brain is offline for a moment."); $("status").textContent = e.message;
   } finally { busy(false, $("status").textContent); }

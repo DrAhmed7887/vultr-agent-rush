@@ -7,6 +7,7 @@ One teach turn: child's words -> literal compiler (Vultr Serverless Inference) -
 from __future__ import annotations
 
 import concurrent.futures as cf
+import contextlib
 import random
 import secrets
 import sqlite3
@@ -27,6 +28,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = Path("/var/lib/ahmes/runs.db") if Path("/var/lib/ahmes").exists() else ROOT / "runs.db"
 SESSION_TTL_S = 24 * 3600
 MAX_SENTENCE = 500
+TEACH_SEED = 11   # the fixed 40-problem test from gate G1, so the README's scores reproduce live
 
 app = FastAPI(title="Teach Ahmes", docs_url=None, redoc_url=None)
 _sessions: dict[str, dict] = {}
@@ -47,7 +49,7 @@ def _db() -> sqlite3.Connection:
 def _log_run(purpose: str, r: sandbox.RunResult) -> str:
     import json
     run_id = secrets.token_hex(6)
-    with _db() as con:
+    with contextlib.closing(_db()) as con, con:
         con.execute("INSERT INTO runs VALUES (?,?,?,?,?,?,?,?)",
                     (run_id, time.time(), purpose, r.verdict, r.elapsed_ms, r.receipt.get("container", ""),
                      int(bool(r.receipt.get("removed_verified"))), json.dumps({**r.receipt, "verdict": r.verdict})))
@@ -67,7 +69,7 @@ def _session(sid: str) -> dict:
         return s
 
 
-GLOBAL_PER_MIN = {"teach": 120, "quiz": 120, "chip": 60, "beyond": 60, "session": 300}
+GLOBAL_PER_MIN = {"teach": 120, "quiz": 120, "chip": 60, "beyond": 60, "session": 300, "read": 600}
 
 
 def _limit(request: Request, per_min: int = 20, bucket: str = "teach") -> None:
@@ -133,20 +135,20 @@ def _check(sk, code: str, seed: int, purpose: str) -> tuple[dict, sandbox.RunRes
     return _grade(sk, probs, run), run, probs
 
 
-def _read_out(sk, code: str, seed: int, run: sandbox.RunResult, probs: list) -> dict:
+def _read_out(sk, run: sandbox.RunResult, probs: list) -> dict:
+    """Which known rule he now behaves like, and his next trap: a problem from this same test
+    that he got wrong (preferring one where his rule and the right rule disagree)."""
     outs = {c["i"]: c.get("out") for c in run.cases if c.get("status") == "ok"}
     idx = [i for i in range(len(probs)) if i in outs]
     cls = classifier.classify(sk.name, [probs[i] for i in idx], [outs[i] for i in idx]) if idx else \
         {"behaves_like": "unknown", "label": "no answers to read", "matches": {}, "n": 0, "unknown": 1.0}
-    # the next trap: a fresh problem where his current rule and the right rule disagree
-    pool = sk.problems(seed + 997, 60)
-    probe = classifier.next_probe(sk.name, cls["behaves_like"], pool)
+    wrong = [i for i in idx if not sk.grade(probs[i], outs[i])]
+    pool = [probs[i] for i in wrong]
+    probe = classifier.next_probe(sk.name, cls["behaves_like"], pool) or (pool[0] if pool else None)
     trap = None
     if probe is not None:
-        pr = sandbox.run(code, [list(probe)], "probe")
-        c = pr.cases[0] if pr.cases else {}
-        trap = {"problem": sk.show(probe), "his_answer": sk.show_answer(probe, c.get("out")) if c.get("status") == "ok" else c.get("status", "?"),
-                "args": list(probe), "out": c.get("out")}
+        out = outs[wrong[pool.index(probe)]]
+        trap = {"problem": sk.show(probe), "his_answer": sk.show_answer(probe, out), "args": list(probe), "out": out}
     cls["trap"] = trap
     return cls
 
@@ -156,7 +158,7 @@ def new_session(request: Request) -> dict:
     _limit(request, 30, "session")
     sid = secrets.token_urlsafe(12)
     with _lock:
-        _sessions[sid] = {"created": time.time(), "seed": random.randrange(1, 10 ** 6),
+        _sessions[sid] = {"created": time.time(), "seed": TEACH_SEED,
                           "brains": {k: s.start_code for k, s in SKILLS.items()}, "history": {k: [] for k in SKILLS}}
     return {"sid": sid, "skills": {k: {"title": s.title, "code": s.start_code,
                                        "welcome": replies.FIXED[f"welcome_{k}"],
@@ -196,13 +198,24 @@ def teach(t: Teach, request: Request) -> dict:
     grade, run, probs = _check(sk, comp.code, s["seed"], "teach")
     run_id = _log_run("teach", run)
     mark("sandbox", verdict=run.verdict, elapsed_ms=run.elapsed_ms, run_id=run_id)
-    if run.verdict in ("TIMEOUT", "OOM"):
-        line = replies.FIXED["dizzy" if run.verdict == "TIMEOUT" else "too_full"]
-        return {"outcome": run.verdict.lower(), "say": line, "voice": voice.speak(line), "steps": comp.steps,
+    statuses = {c.get("status") for c in run.cases}
+    if run.verdict == "TIMEOUT" or "dizzy" in statuses:
+        outcome = "timeout"
+    elif run.verdict == "OOM" or "too_full" in statuses:
+        outcome = "oom"
+    else:
+        outcome = ""
+    if outcome:   # stopped by the container limit or the per-case timer inside it: don't keep this brain
+        line = replies.FIXED["dizzy" if outcome == "timeout" else "too_full"]
+        return {"outcome": outcome, "say": line, "voice": voice.speak(line), "steps": comp.steps,
                 "proposed": comp.code, "grade": grade, "run": {"id": run_id, **run.receipt, "verdict": run.verdict},
                 "timeline": timeline, "code": current}
+    if run.verdict != "OK" or any(c.get("i") == -1 for c in run.cases):
+        line = replies.FIXED["busy" if run.verdict == "BUSY" else "rejected"]
+        return {"outcome": "rejected", "say": line, "voice": voice.speak(line), "reason": run.verdict,
+                "steps": comp.steps, "proposed": comp.code, "timeline": timeline, "code": current}
 
-    cls = _read_out(sk, comp.code, s["seed"], run, probs)
+    cls = _read_out(sk, run, probs)
     mark("read_out", behaves_like=cls["behaves_like"])
     s["brains"][sk.name] = comp.code
     s["history"][sk.name].append({"right": grade["right"], "at": time.time()})
@@ -221,7 +234,6 @@ def quiz(q: SkillReq, request: Request) -> dict:
     s, sk = _session(q.sid), _skill(q.skill)
     grade, run, _ = _check(sk, s["brains"][sk.name], random.randrange(10 ** 6), "quiz")
     run_id = _log_run("quiz", run)
-    grade["rows"] = grade["rows"][:10]
     return {"grade": grade, "run": {"id": run_id, **run.receipt, "verdict": run.verdict}}
 
 
@@ -247,6 +259,7 @@ def chip(c: Chip, request: Request) -> dict:
     witness = _pool.submit(_check, sk, s["brains"][sk.name], s["seed"], "witness")
     if not g.ok:
         w_grade, w_run, _ = witness.result(timeout=15)
+        _log_run("witness", w_run)
         return {"chip": c.chip, "label": fx["label"], "code": fx["code"], "verdict": "BLOCKED_STATIC",
                 "reason": g.reason, "line": g.line, "say": replies.FIXED["blocked"],
                 "voice": voice.speak(replies.FIXED["blocked"]),
@@ -255,6 +268,7 @@ def chip(c: Chip, request: Request) -> dict:
     run = sandbox.run(fx["code"], [list(p) for p in probs], f"chip:{c.chip}")
     run_id = _log_run(f"chip:{c.chip}", run)
     w_grade, w_run, _ = witness.result(timeout=15)
+    _log_run("witness", w_run)
     line = replies.FIXED["dizzy" if run.verdict == "TIMEOUT" else "too_full" if run.verdict == "OOM" else "blocked"]
     return {"chip": c.chip, "label": fx["label"], "code": fx["code"], "verdict": run.verdict, "say": line,
             "voice": voice.speak(line), "run": {"id": run_id, **run.receipt, "verdict": run.verdict},
@@ -275,25 +289,30 @@ def beyond(name: str, request: Request) -> dict:
 
 
 @app.get("/api/receipt/{run_id}")
-def receipt(run_id: str):
+def receipt(run_id: str, request: Request):
     import json
+    _limit(request, 60, "read")
     if not run_id.isalnum() or len(run_id) > 20:
         raise HTTPException(400, "Bad id")
-    row = _db().execute("SELECT receipt FROM runs WHERE id=?", (run_id,)).fetchone()
+    with contextlib.closing(_db()) as con:
+        row = con.execute("SELECT receipt FROM runs WHERE id=?", (run_id,)).fetchone()
     if not row:
         raise HTTPException(404, "No such run")
     return JSONResponse(json.loads(row[0]), headers={"Content-Disposition": f'attachment; filename="ahmes-receipt-{run_id}.json"'})
 
 
 @app.get("/api/log")
-def run_log() -> list:
-    rows = _db().execute("SELECT id, at, purpose, verdict, elapsed_ms, container, removed FROM runs ORDER BY at DESC LIMIT 25").fetchall()
+def run_log(request: Request) -> list:
+    _limit(request, 60, "read")
+    with contextlib.closing(_db()) as con:
+        rows = con.execute("SELECT id, at, purpose, verdict, elapsed_ms, container, removed FROM runs ORDER BY at DESC LIMIT 25").fetchall()
     return [{"id": r[0], "at": r[1], "purpose": r[2], "verdict": r[3], "elapsed_ms": r[4], "container": r[5], "removed": bool(r[6])} for r in rows]
 
 
 @app.get("/api/sandboxes")
-def live_sandboxes() -> dict:
+def live_sandboxes(request: Request) -> dict:
     """What `docker ps` shows right now: normally nothing, because every box is destroyed after its task."""
+    _limit(request, 60, "read")
     p = sandbox._docker("ps", "-a", "--filter", "label=ahmes=sandbox", "--format", "{{.Names}} {{.Status}}")
     return {"containers": [l for l in p.stdout.decode().splitlines() if l.strip()]}
 

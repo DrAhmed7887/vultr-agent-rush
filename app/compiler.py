@@ -37,6 +37,7 @@ A child is teaching Ahmes. Rewrite Ahmes's function solve() so it does EXACTLY w
 Rules:
 - Change only the steps the child's words state. Keep the OLD code for anything the child did not say how to do.
 - Never add a step, a check, or a maths idea the child did not say, even if the result is wrong. Wrong is fine: Ahmes is learning.
+- Every part of the child's sentence becomes a step. If the child says what the answer is in some case (for example "they're equal"), return that answer right there, so old code cannot override it.
 - If the child mentions a specific number from an example, replace it with the input it came from.
 - If the child only gives an answer and no rule (for example "it's 0.5" or "the answer is 5/6"), return {"no_rule": true}.
 - Allowed: if/else, while, for over range(), return, + - * // %, comparisons, and the helpers below. No imports, no strings, no lists, no "/".
@@ -132,11 +133,20 @@ def _patterns(code: str) -> set[str]:
 
 
 def _step_patterns(step_code: str) -> set[str]:
-    body = "\n".join("    " + line for line in step_code.splitlines()) or "    pass"
+    """Patterns in one step's snippet. A snippet can be a bare header such as "while a != b:",
+    so give any line ending in a colon an empty body before parsing."""
+    lines = [l for l in step_code.splitlines() if l.strip()]
+    out: list[str] = []
+    for i, line in enumerate(lines):
+        out.append(line)
+        nxt = lines[i + 1] if i + 1 < len(lines) else ""
+        if line.rstrip().endswith(":") and len(nxt) - len(nxt.lstrip()) <= len(line) - len(line.lstrip()):
+            out.append(line[: len(line) - len(line.lstrip())] + "    pass")
+    body = "\n".join("    " + line for line in out) or "    pass"
     try:
         return _patterns_tree(ast.parse(f"def _f():\n{body}\n"))
     except SyntaxError:
-        return _patterns("\n".join(line.strip() for line in step_code.splitlines()))
+        return set().union(*(_patterns(l.strip().rstrip(":")) for l in lines)) if lines else set()
 
 
 MAX_PATTERNS_PER_STEP = 3
@@ -159,6 +169,8 @@ def _busiest_expression(code: str) -> int:
 def quote_check(sentence: str, current: str, steps: list, code: str) -> str:
     """Return "" if the patch is honest, or the reason it was rejected."""
     said = _norm(sentence)
+    if not steps:
+        return "no step ties the change to the child's words"
     declared: set[str] = set()
     for st in steps:
         q = _norm(str(st.get("quote", "")))
@@ -187,7 +199,9 @@ def _call(model: str, messages: list[dict], timeout: float) -> tuple[dict, dict,
     return json.loads(text[text.find("{"): text.rfind("}") + 1]), data.get("usage", {}), text
 
 
-def compile_sentence(current: str, sentence: str, model: str | None = None, timeout: float = 60.0) -> Compiled:
+def compile_sentence(current: str, sentence: str, model: str | None = None, timeout: float = 25.0) -> Compiled:
+    """Two attempts: a rejected patch is retried with the reason; if the main model's call fails,
+    the second attempt uses the fallback model on the same Vultr endpoint."""
     model = model or MODEL
     messages = _messages(current, sentence)
     last = Compiled(False, reason="not run", model=model)
@@ -196,6 +210,7 @@ def compile_sentence(current: str, sentence: str, model: str | None = None, time
             obj, usage, _ = _call(model, messages, timeout)
         except Exception as e:  # noqa: BLE001
             last = Compiled(False, reason=f"compiler unavailable: {type(e).__name__}", model=model)
+            model = FALLBACK_MODEL
             continue
         if obj.get("no_rule"):
             return Compiled(True, no_rule=True, model=model, usage=usage)

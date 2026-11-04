@@ -3,7 +3,7 @@
 **Challenge:** 1, Blast Radius Zero
 **Project title:** Teach Ahmes
 **Short description (one line):**
-A child teaches a robot classmate fractions; her words are compiled literally into his code, run in a throwaway Vultr sandbox, and checked by exact arithmetic.
+Teach a buggy robot maths in plain words: Vultr AI turns your exact words into his code, a throwaway sandbox runs it, and arithmetic grades 40 tests.
 
 **Long description:**
 Teach Ahmes turns a learner's maths explanation into executable robot behaviour, not just a chatbot reply. Vultr Serverless Inference generates the code, a disposable resource-limited container on Vultr Cloud Compute executes it, and exact arithmetic grades 40 problems. Give him a rule that never ends, and the demo shows it being killed and removed, with a downloadable execution receipt.

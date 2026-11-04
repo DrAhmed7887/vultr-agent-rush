@@ -68,3 +68,30 @@ def test_grading_is_exact():
     assert not sk.grade((1, 2, 1, 3), (2, 5))
     assert not sk.grade((1, 2, 1, 3), (5, 0))
     assert Fraction(1, 2) + Fraction(1, 3) == Fraction(5, 6)
+
+
+def test_header_only_step_is_declared():
+    from app.compiler import quote_check
+    current = "def solve(top1, bottom1, top2, bottom2):\n    return (top1 + top2, bottom1 + bottom2)\n"
+    code = ("def solve(top1, bottom1, top2, bottom2):\n    while bottom1 != bottom2:\n"
+            "        bottom1 = bottom1 * 2\n        bottom2 = bottom2 * 2\n    return (top1 + top2, bottom1 + bottom2)\n")
+    steps = [{"quote": "until they're the same", "code": "while bottom1 != bottom2:"},
+             {"quote": "keep doubling both bottoms", "code": "bottom1 = bottom1 * 2\nbottom2 = bottom2 * 2"}]
+    assert quote_check("Keep doubling both bottoms until they're the same.", current, steps, code) == ""
+    assert quote_check("Keep doubling both bottoms.", current, [], code) != ""
+
+
+def test_trap_is_always_a_problem_he_got_wrong():
+    from app import main, sandbox
+    from app.skills import SKILLS
+    sk = SKILLS["compare_decimals"]
+    probs = sk.problems(main.TEACH_SEED, 40)
+    # pretend he answered with his starting rule ("more digits wins") on every problem
+    def longer(p):
+        _, d1, _, _, d2, _ = p
+        return 1 if d1 > d2 else 2 if d2 > d1 else 0
+    cases = [{"i": i, "status": "ok", "out": longer(p)} for i, p in enumerate(probs)]
+    run = sandbox.RunResult("OK", cases, 300, {})
+    cls = main._read_out(sk, run, probs)
+    assert cls["trap"] is not None
+    assert not sk.grade(tuple(cls["trap"]["args"]), cls["trap"]["out"])

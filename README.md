@@ -41,7 +41,7 @@ The sentence decides what he does:
 | "Keep doubling both bottoms until they're the same." | `while b1 != b2: b1*=2; b2*=2`, which never makes unequal bottoms equal | **Stopped by the sandbox at 3 s** |
 | "The answer is 5/6." | No rule given, so he asks for one | — |
 
-These are measured results on 13 curated sentences and fixed 40-problem sets. See [`spike/results-qwen3.8-27b.json`](spike/results-qwen3.8-27b.json): all 13 behaved as expected. That shows the mechanism works; it doesn't show general correctness, or that children learn.
+These are measured results on 13 curated sentences and fixed 40-problem sets; the live demo uses the same decimal and fraction tests (seed 11), so the scores reproduce there. See [`spike/results-qwen3.8-27b.json`](spike/results-qwen3.8-27b.json): on the latest run (4 Nov), 12 of the 13 behaved as expected. The miss: *"Add a zero to the shorter one"* was compiled as "pad the shorter one to the same length", a generous reading that cures him. The quote check tests form, not meaning, so it let that through. That shows the mechanism works; it doesn't show general correctness, or that children learn.
 
 ## How Vultr powers it
 
@@ -62,7 +62,7 @@ flowchart LR
 | Vultr service | What it does here | Settings |
 |---|---|---|
 | **Cloud Compute** | The control plane. It runs the web app and orchestrator, decides what runs, where, with which limits and for how long, and proves each container was destroyed. | `vc2-2c-4gb`, Madrid, Docker on Ubuntu 24.04, $20/month |
-| **Serverless Inference** | Every LLM call: the literal compiler that turns a child's words into code. | `qwen3.8-27b` at temperature 0, JSON output, about 1–2 s per call; `glm-5.3` as fallback |
+| **Serverless Inference** | Every LLM call: the literal compiler that turns a child's words into code. | `qwen3.8-27b` at temperature 0, JSON output, about 1–2 s per call; `glm-5.3` if the main model's call fails |
 | **Serverless Inference (TTS)** | Backup voice if ElevenLabs is down | `auk-flash` |
 | Host firewall (ufw) | Only 22, 80 and 443 open | on the VM |
 
@@ -125,7 +125,7 @@ Every run writes a downloadable JSON receipt: container ID, the limits Docker re
 |---|---|---|
 | A child's code loops, eats memory, or forks | Per-container memory, CPU and process limits; 3 s timeout; host kill; sweeper | A shared kernel; no gVisor or microVM yet |
 | Code tries to reach out or read secrets | No network; no env secrets or mounts; read-only root; non-root user; guard plus stripped builtins | A container escape would need a kernel bug |
-| Too many requests | At most 2 sandboxes at once on the VM; per-IP limits; a global cap of 120 teach turns a minute; 4 KB request body | One small VM, so a determined flood would slow it |
+| Too many requests | At most 2 sandboxes at once on the VM; per-IP limits; a global cap of 120 teach turns a minute; 500-character sentences; 64 KB request body; a daily cap on new voice lines | One small VM, so a determined flood would slow it |
 | Words smuggle in a full fix | Quote check, per-step operation cap, unexplained-maths rejection | It checks form, not meaning |
 
 **Measured on the live demo:**
@@ -148,7 +148,7 @@ An LLM asked to "fix" fractions will quietly write the right answer whatever the
 ## Run it
 
 ```bash
-uv sync && uv run pytest -q          # 7 tests: guard, classifier, quote check, grading
+uv sync && uv run pytest -q          # 9 tests: guard, classifier, quote check, grading, trap choice
 deploy/deploy.sh                     # rsync to the Vultr VM, build the sandbox image, restart
 ```
 
