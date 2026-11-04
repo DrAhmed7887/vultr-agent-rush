@@ -1,0 +1,87 @@
+<template>
+  <style>
+#root { position: absolute; inset: 0; font-family: "Nunito", sans-serif; color: #16224A; overflow: hidden; }
+.card { position: absolute; left: 1010px; top: 170px; width: 760px; height: 440px; z-index: 2; }
+.card-in { position: absolute; inset: 0; background: #FFFFFF; border: 2px solid #C9D7EA; border-radius: 28px; }
+.card-ask { position: absolute; left: 0; right: 0; top: 40px; text-align: center; font-weight: 800; font-size: 44px; color: #4E5B80; }
+.num { position: absolute; top: 170px; width: 340px; text-align: center; font-weight: 900; font-size: 140px; line-height: 1; font-variant-numeric: tabular-nums; }
+.marks { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.cross { position: absolute; left: 60px; top: 120px; width: 300px; text-align: center; font-weight: 900; font-size: 230px; line-height: 1; color: #C6432A; opacity: 0; }
+.fracs { position: absolute; left: 0; right: 0; top: 130px; display: flex; justify-content: center; align-items: center; gap: 40px; }
+.frac { display: flex; flex-direction: column; align-items: center; min-width: 140px; font-weight: 900; font-size: 96px; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.frac .bar { width: 100%; height: 8px; background: #16224A; border-radius: 4px; margin: 6px 0; }
+.plus { font-weight: 900; font-size: 96px; }
+.slot { position: absolute; left: 1010px; top: 670px; width: 760px; height: 236px; z-index: 4; }
+.bubble { position: absolute; inset: 0; background: #FFFFFF; border: 5px solid #E0A526; border-radius: 34px;
+  display: flex; align-items: center; padding: 0 44px; font-weight: 800; font-size: 46px; line-height: 1.25; }
+.bubble.long { font-size: 38px; line-height: 1.25; }
+.bubble::after { content: ""; position: absolute; left: 90px; bottom: -44px; border: 22px solid transparent; border-top: 22px solid #E0A526; }
+.bubble .w { opacity: 0; }
+.code { position: absolute; inset: 0; background: #16224A; border-radius: 28px; padding: 30px 40px; font-family: "JetBrains Mono", monospace;
+  font-size: 30px; line-height: 1.45; color: #E6EEFF; white-space: pre; font-variant-ligatures: none; font-feature-settings: "calt" 0, "liga" 0; }
+.code .c { color: #7FF3E6; }
+.code .ln { display: block; clip-path: inset(0 100% 0 0); }
+.spark { position: absolute; width: 26px; height: 26px; background: #E0A526; border-radius: 4px; opacity: 0; }
+.tab { position: absolute; left: 310px; top: 118px; width: 1500px; height: 844px; z-index: 5; }
+.tab-in { position: absolute; inset: 0; background: #16224A; border-radius: 44px; }
+.screen { position: absolute; left: 20px; top: 11px; width: 1460px; height: 822px; border-radius: 26px; overflow: hidden; background: #F7FAFD; }
+.screen video, .screen img { position: absolute; left: 0; top: 0; width: 1460px; height: 822px; object-fit: cover; }
+.badge { position: absolute; right: -40px; top: -50px; width: 250px; height: 250px; border-radius: 50%; background: #E0A526; border: 10px solid #FFFFFF;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; color: #16224A; z-index: 3; }
+.badge b { font-weight: 900; font-size: 84px; line-height: 0.9; }
+.badge span { font-weight: 800; font-size: 30px; }
+.receipt { position: absolute; left: -50px; padding: 16px 30px; background: #FFFFFF; border: 6px solid #C6432A; border-radius: 18px;
+  color: #C6432A; font-weight: 900; font-size: 50px; z-index: 8; }
+.receipt small { display: block; font-weight: 800; font-size: 28px; color: #4E5B80; }
+</style>
+  <div id="root" data-composition-id="ch2" data-width="1920" data-height="1080">
+    <div id="c2-card" class="card clip" data-start="0.1" data-duration="8.35" data-track-index="2" ><div id="c2-card-in" class="card-in" style="opacity: 0"><div class="card-ask">Add them</div><div class="fracs"><div class="frac"><span>1</span><span class="bar"></span><span id="c2-den-a">2</span></div><div class="plus">+</div><div class="frac"><span>1</span><span class="bar"></span><span id="c2-den-b">3</span></div></div></div></div>
+    <div id="c2-bub" class="slot clip" data-start="0.4" data-duration="3.55" data-track-index="3" ><div id="c2-bub-in" class="bubble "><span>“<span class="w">Keep </span><span class="w">doubling </span><span class="w">both </span><span class="w">bottoms </span><span class="w">until </span><span class="w">they’re </span><span class="w">the </span><span class="w">same. </span>”</span></div></div>
+    <div id="c2-sparks" class=" clip" data-start="3.8" data-duration="0.8" data-track-index="4" data-layout-ignore><div class="spark" style="left: 462px; top: 140px"></div><div class="spark" style="left: 512px; top: 120px"></div><div class="spark" style="left: 560px; top: 146px"></div></div>
+    <div id="c2-code" class="slot clip" data-start="3.85" data-duration="4.6" data-track-index="3" ><div id="c2-code-in" class="code" style="opacity: 0"><span class="ln c"># "keep doubling both bottoms"</span><span class="ln">while a.bottom != b.bottom:</span><span class="ln">    a.bottom *= 2</span><span class="ln">    b.bottom *= 2</span></div></div>
+    <div id="c2-box" class=" clip" data-start="3.9" data-duration="4.6" data-track-index="6" style="position:absolute;left:70px;top:64px;width:860px;height:936px;z-index:6"><div id="c2-box-in" style="position:absolute;inset:0"><div style="position:absolute;left:0;top:64px;right:0;bottom:0;border:8px solid #12857D;border-radius:36px;background:rgba(18,133,125,0.08)"></div><div style="position:absolute;left:36px;top:0;height:72px;padding:0 28px;background:#12857D;border-radius:18px 18px 0 0;display:flex;align-items:center;gap:24px;color:#FFFFFF;font-weight:900;font-size:38px">Sandbox <span id="c2-timer" style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:34px;min-width:110px">0.0 s</span></div><div id="c2-stopped" style="position:absolute;left:230px;top:720px;padding:10px 30px;border:7px solid #C6432A;border-radius:16px;color:#C6432A;font-weight:900;font-size:64px;background:#F7FAFD;opacity:0">Stopped</div></div></div>
+    <div id="c2-tab" class="tab"><div id="c2-tab-in" class="tab-in"><div class="screen"><video id="c2-v" class="clip" src="assets/proof/dizzy.mp4" muted playsinline data-start="8.4" data-duration="14.7" data-track-index="9"></video></div></div></div>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      
+const show = (sel, on, t, d = 0.12) => tl.to(sel, { opacity: on ? 1 : 0, duration: d, ease: "none" }, t);
+const typeWords = (sel, t0, gap) => gsap.utils.toArray(sel).forEach((w, i) => tl.to(w, { opacity: 1, duration: 0.08, ease: "none" }, t0 + i * gap));
+const bubbleIn = (sel, t) => tl.fromTo(sel, { y: 300 }, { y: 0, duration: 0.6, ease: "expo.out" }, t);
+const bubbleInto = (sel, t) => tl.to(sel, { x: -880, y: -640, scale: 0.05, rotation: -20, backgroundColor: "#E0A526", duration: 0.55, ease: "power3.in" }, t);
+const sparks = (sel, t) => {
+  tl.fromTo(sel, { opacity: 1, scale: 0.2, x: 0, y: 0 }, { scale: 1, x: (i) => [-40, 0, 40][i], y: (i) => [-30, -50, -24][i], rotation: 45, duration: 0.35, ease: "expo.out", stagger: 0.03 }, t);
+  tl.to(sel, { opacity: 0, duration: 0.2, ease: "none" }, t + 0.3);
+};
+const codeIn = (sel, t) => {
+  tl.fromTo(sel, { opacity: 0, scale: 0.9, filter: "blur(8px)" }, { opacity: 1, scale: 1, filter: "blur(0px)", duration: 0.3, ease: "expo.out" }, t);
+  gsap.utils.toArray(sel + " .ln").forEach((ln, i) => tl.to(ln, { clipPath: "inset(0 0% 0 0)", duration: 0.32, ease: "none" }, t + 0.15 + i * 0.3));
+};
+const blurIn = (sel, t) => tl.fromTo(sel, { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.18, ease: "expo.out" }, t);
+const blurOut = (sel, t) => tl.to(sel, { opacity: 0, filter: "blur(8px)", duration: 0.18, ease: "power2.in" }, t);
+const stampIn = (sel, t, rot = -8) => tl.fromTo(sel, { opacity: 0, scale: 1.7, rotation: rot - 10 }, { opacity: 1, scale: 1, rotation: rot, duration: 0.2, ease: "power4.out" }, t);
+const pop = (sel, t) => tl.fromTo(sel, { opacity: 0, scale: 0.3 }, { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(1.8)" }, t);
+const TAB = { full: { x: 0, y: 0, scale: 1 }, col: { x: 700, y: 52, scale: 0.5067 }, offR: { x: 1700, y: 52, scale: 0.5067 }, box: { x: -230, y: 90, scale: 0.55 } };
+const tabSet = (sel, s, t) => tl.set(sel, { ...TAB[s], transformOrigin: "0 0" }, t);
+const tabTo = (sel, s, t, d, ease) => tl.to(sel, { ...TAB[s], transformOrigin: "0 0", duration: d, ease }, t);
+
+      blurIn("#c2-card-in", 0.3);
+      bubbleIn("#c2-bub-in", 0.5); typeWords("#c2-bub-in .w", 0.9, 0.27); bubbleInto("#c2-bub-in", 3.35);
+      sparks("#c2-sparks .spark", 3.9);
+      codeIn("#c2-code-in", 3.95);
+      tl.fromTo("#c2-box-in", { y: -1100 }, { y: 0, duration: 0.35, ease: "power3.in" }, 3.95);
+      const T0 = 4.4, T1 = 7.4;
+      const timer = document.getElementById("c2-timer"), dA = document.getElementById("c2-den-a"), dB = document.getElementById("c2-den-b");
+      const counters = (t) => { const p = Math.min(Math.max((t - T0) / (T1 - T0), 0), 1); const k = Math.floor(p * p * 12);
+        dA.textContent = String(2 * 2 ** k); dB.textContent = String(3 * 2 ** k); timer.textContent = (p * 3).toFixed(1) + " s"; };
+      tl.to({}, { duration: 23.1, ease: "none", onUpdate: () => counters(tl.time()) }, 0); counters(0);
+      stampIn("#c2-stopped", 7.38, -7);
+      tl.to("#c2-box-in", { y: -1150, duration: 0.4, ease: "power3.in" }, 8);
+      blurOut("#c2-card-in", 8.1); blurOut("#c2-code-in", 8.1);
+      tabSet("#c2-tab", "box", 0); tl.set("#c2-tab", { opacity: 0 }, 0);
+      tl.to("#c2-tab", { opacity: 1, duration: 0.15, ease: "none" }, 8.4); tabTo("#c2-tab", "full", 8.4, 0.6, "power2.inOut");
+      window.__timelines["ch2"] = tl;
+    })();
+  </script>
+</template>

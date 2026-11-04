@@ -33,7 +33,7 @@ A second open model, Thoth the teacher (GLM-5.3 on Vultr), watches every lesson:
 **Links:**
 - Demo: https://64-177-33-215.sslip.io
 - Repo: https://github.com/DrAhmed7887/vultr-agent-rush
-- Video: video/out/teach-ahmes-final.mp4, 2:47: a 27 s animated opening (video/opening, HyperFrames), then the 2:21 demo recorded from the live site on 4 Nov (upload where you choose, for example YouTube unlisted). Rebuild it with: `ffmpeg -i video/out/opening.mp4 -i video/out/teach-ahmes-demo.mp4 -filter_complex "[0:v][0:a][1:v][1:a]concat=n=2:v=1:a=1" video/out/teach-ahmes-final.mp4`
+- Video: video/out/teach-ahmes-film.mp4, 2:32, one HyperFrames film (video/film): the animated story, with every sandbox claim shown on the live site inside it (upload where you choose, for example YouTube unlisted). Rebuild: `cd video/film && python3 gen_audio.py && python3 build.py && npx hyperframes render -o ../out/teach-ahmes-film.mp4`
 - Slides: video/out/slides.pdf · Cover: video/out/cover.png
 
 **Before submitting (Ahmed):**

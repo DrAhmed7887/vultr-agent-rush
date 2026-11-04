@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #F7FAFD; }
+      #root { width: 100%; height: 100%; position: relative; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="151.5" data-width="1920" data-height="1080">
+      <div id="stage" data-composition-id="stage" data-composition-src="compositions/stage.html" data-start="0" data-duration="151.5" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080" style="z-index: 1"></div>
+      <div id="ch1" data-composition-id="ch1" data-composition-src="compositions/ch1.html" data-start="0" data-duration="33.9" data-track-index="2" data-track-kind="graphics" data-width="1920" data-height="1080" style="z-index: 2"></div>
+      <div id="ch2" data-composition-id="ch2" data-composition-src="compositions/ch2.html" data-start="33.5" data-duration="23.1" data-track-index="3" data-track-kind="graphics" data-width="1920" data-height="1080" style="z-index: 3"></div>
+      <div id="ch3" data-composition-id="ch3" data-composition-src="compositions/ch3.html" data-start="56.6" data-duration="43.4" data-track-index="2" data-track-kind="graphics" data-width="1920" data-height="1080" style="z-index: 4"></div>
+      <div id="ch4" data-composition-id="ch4" data-composition-src="compositions/ch4.html" data-start="100" data-duration="23.6" data-track-index="3" data-track-kind="graphics" data-width="1920" data-height="1080" style="z-index: 5"></div>
+      <div id="ch5" data-composition-id="ch5" data-composition-src="compositions/ch5.html" data-start="123.6" data-duration="23.1" data-track-index="2" data-track-kind="graphics" data-width="1920" data-height="1080" style="z-index: 6"></div>
+      <div id="ch6" data-composition-id="ch6" data-composition-src="compositions/ch6.html" data-start="146.4" data-duration="5.1" data-track-index="3" data-track-kind="graphics" data-width="1920" data-height="1080" style="z-index: 7"></div>
+
+      <audio id="score" class="clip" src="assets/audio/raw/score.mp3" data-start="0" data-duration="151.5" data-track-index="10" data-volume="0.16" data-fade-out="2.0"></audio>
+      <audio id="vo-a1" class="clip" src="assets/audio/norm/a1.wav" data-start="0.3" data-duration="4.505" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="sfx-pen-1" class="clip" src="assets/audio/raw/sfx_pen.mp3" data-start="2.82" data-duration="1.2" data-track-index="12" data-volume="0.6"></audio>
+      <audio id="sfx-stamp-1" class="clip" src="assets/audio/raw/sfx_stamp.mp3" data-start="5.16" data-duration="1" data-track-index="11" data-volume="0.8"></audio>
+      <audio id="vo-v2-n1" class="clip" src="assets/audio/norm/v2_n1.wav" data-start="5.9" data-duration="5.201" data-track-index="12" data-volume="1.0"></audio>
+      <audio id="vo-c1" class="clip" src="assets/audio/norm/c1.wav" data-start="11.201" data-duration="1.347" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="sfx-glyphs-1" class="clip" src="assets/audio/raw/sfx_glyphs.mp3" data-start="12.661" data-duration="1.48" data-track-index="11" data-volume="0.45"></audio>
+      <audio id="vo-v2-n2" class="clip" src="assets/audio/norm/v2_n2.wav" data-start="13.601" data-duration="8.081" data-track-index="12" data-volume="1.0"></audio>
+      <audio id="sfx-whoosh-a-1" class="clip" src="assets/audio/raw/sfx_whoosh_a.mp3" data-start="19.3" data-duration="0.68" data-track-index="11" data-volume="0.5"></audio>
+      <audio id="vo-app-d-04" class="clip" src="assets/audio/norm/app_D_04.wav" data-start="21.95" data-duration="1.347" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="vo-v2-n3" class="clip" src="assets/audio/norm/v2_n3.wav" data-start="27.31" data-duration="5.433" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="sfx-pop-1" class="clip" src="assets/audio/raw/sfx_pop.mp3" data-start="27.49" data-duration="0.48" data-track-index="12" data-volume="0.6"></audio>
+      <audio id="sfx-whoosh-b-1" class="clip" src="assets/audio/raw/sfx_whoosh_b.mp3" data-start="33.1" data-duration="0.6" data-track-index="11" data-volume="0.5"></audio>
+      <audio id="vo-c2" class="clip" src="assets/audio/norm/c2.wav" data-start="34.3" data-duration="2.461" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="sfx-glyphs-2" class="clip" src="assets/audio/raw/sfx_glyphs.mp3" data-start="36.71" data-duration="1.609" data-track-index="12" data-volume="0.4" data-playback-rate="0.92"></audio>
+      <audio id="sfx-lock-1" class="clip" src="assets/audio/raw/sfx_lock.mp3" data-start="37.78" data-duration="1" data-track-index="11" data-volume="0.45"></audio>
+      <audio id="sfx-spin-1" class="clip" src="assets/audio/raw/sfx_spin.mp3" data-start="37.9" data-duration="3" data-track-index="13" data-volume="0.22"></audio>
+      <audio id="sfx-stamp-2" class="clip" src="assets/audio/raw/sfx_stamp.mp3" data-start="40.86" data-duration="1.111" data-track-index="11" data-volume="0.8" data-playback-rate="0.9"></audio>
+      <audio id="sfx-lift-1" class="clip" src="assets/audio/raw/sfx_lift.mp3" data-start="41.33" data-duration="0.8" data-track-index="12" data-volume="0.9"></audio>
+      <audio id="sfx-whoosh-a-2" class="clip" src="assets/audio/raw/sfx_whoosh_a.mp3" data-start="41.85" data-duration="0.756" data-track-index="13" data-volume="0.45" data-playback-rate="0.9"></audio>
+      <audio id="vo-app-f-04" class="clip" src="assets/audio/norm/app_F_04.wav" data-start="43.45" data-duration="4.83" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="vo-v2-n4" class="clip" src="assets/audio/norm/v2_n4.wav" data-start="48.5" data-duration="7.848" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="vo-v2-n5" class="clip" src="assets/audio/norm/v2_n5.wav" data-start="56.8" data-duration="7.523" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="vo-v2-n6" class="clip" src="assets/audio/norm/v2_n6.wav" data-start="65.3" data-duration="8.034" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="sfx-stamp-3" class="clip" src="assets/audio/raw/sfx_stamp.mp3" data-start="67.58" data-duration="1" data-track-index="12" data-volume="0.7"></audio>
+      <audio id="sfx-stamp-4" class="clip" src="assets/audio/raw/sfx_stamp.mp3" data-start="70.953" data-duration="1.111" data-track-index="12" data-volume="0.7" data-playback-rate="0.9"></audio>
+      <audio id="vo-v2-n7" class="clip" src="assets/audio/norm/v2_n7.wav" data-start="74.8" data-duration="8.731" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="vo-v2-thoth" class="clip" src="assets/audio/norm/v2_thoth.wav" data-start="83.8" data-duration="6.78" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="vo-v2-c-ans" class="clip" src="assets/audio/norm/v2_c_ans.wav" data-start="90.85" data-duration="1.44" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="vo-app-d-10" class="clip" src="assets/audio/norm/app_D_10.wav" data-start="94.85" data-duration="4.876" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="sfx-whoosh-b-2" class="clip" src="assets/audio/raw/sfx_whoosh_b.mp3" data-start="100.05" data-duration="0.545" data-track-index="11" data-volume="0.5" data-playback-rate="1.1"></audio>
+      <audio id="sfx-stamp-5" class="clip" src="assets/audio/raw/sfx_stamp.mp3" data-start="101.08" data-duration="0.909" data-track-index="11" data-volume="0.6" data-playback-rate="1.1"></audio>
+      <audio id="vo-v2-c4" class="clip" src="assets/audio/norm/v2_c4.wav" data-start="101.8" data-duration="5.294" data-track-index="12" data-volume="1.0"></audio>
+      <audio id="sfx-glyphs-3" class="clip" src="assets/audio/raw/sfx_glyphs.mp3" data-start="106.704" data-duration="1.41" data-track-index="11" data-volume="0.45" data-playback-rate="1.05"></audio>
+      <audio id="sfx-whoosh-a-3" class="clip" src="assets/audio/raw/sfx_whoosh_a.mp3" data-start="111.044" data-duration="0.648" data-track-index="11" data-volume="0.45" data-playback-rate="1.05"></audio>
+      <audio id="vo-app-d-12" class="clip" src="assets/audio/norm/app_D_12.wav" data-start="112.644" data-duration="1.533" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="sfx-pop-2" class="clip" src="assets/audio/raw/sfx_pop.mp3" data-start="117.984" data-duration="0.533" data-track-index="11" data-volume="0.6" data-playback-rate="0.9"></audio>
+      <audio id="vo-app-d-13" class="clip" src="assets/audio/norm/app_D_13.wav" data-start="118.344" data-duration="2.043" data-track-index="12" data-volume="1.0"></audio>
+      <audio id="vo-v2-n9" class="clip" src="assets/audio/norm/v2_n9.wav" data-start="120.587" data-duration="2.833" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="vo-v2-n10" class="clip" src="assets/audio/norm/v2_n10.wav" data-start="123.8" data-duration="6.502" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="vo-v2-n-arch" class="clip" src="assets/audio/norm/v2_n_arch.wav" data-start="131.1" data-duration="8.452" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="vo-v2-n11" class="clip" src="assets/audio/norm/v2_n11.wav" data-start="140.1" data-duration="5.155" data-track-index="11" data-volume="1.0"></audio>
+      <audio id="sfx-whoosh-b-3" class="clip" src="assets/audio/raw/sfx_whoosh_b.mp3" data-start="145.85" data-duration="0.6" data-track-index="11" data-volume="0.5"></audio>
+      <audio id="vo-v2-n12" class="clip" src="assets/audio/norm/v2_n12.wav" data-start="146.8" data-duration="3.019" data-track-index="11" data-volume="1.0"></audio>
+    </div>
+    <script>
+      window.__timelines["main"] = gsap.timeline({ paused: true });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,82 @@
+<template>
+  <style>
+#root { position: absolute; inset: 0; font-family: "Nunito", sans-serif; color: #16224A; overflow: hidden; }
+.card { position: absolute; left: 1010px; top: 170px; width: 760px; height: 440px; z-index: 2; }
+.card-in { position: absolute; inset: 0; background: #FFFFFF; border: 2px solid #C9D7EA; border-radius: 28px; }
+.card-ask { position: absolute; left: 0; right: 0; top: 40px; text-align: center; font-weight: 800; font-size: 44px; color: #4E5B80; }
+.num { position: absolute; top: 170px; width: 340px; text-align: center; font-weight: 900; font-size: 140px; line-height: 1; font-variant-numeric: tabular-nums; }
+.marks { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.cross { position: absolute; left: 60px; top: 120px; width: 300px; text-align: center; font-weight: 900; font-size: 230px; line-height: 1; color: #C6432A; opacity: 0; }
+.fracs { position: absolute; left: 0; right: 0; top: 130px; display: flex; justify-content: center; align-items: center; gap: 40px; }
+.frac { display: flex; flex-direction: column; align-items: center; min-width: 140px; font-weight: 900; font-size: 96px; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.frac .bar { width: 100%; height: 8px; background: #16224A; border-radius: 4px; margin: 6px 0; }
+.plus { font-weight: 900; font-size: 96px; }
+.slot { position: absolute; left: 1010px; top: 670px; width: 760px; height: 236px; z-index: 4; }
+.bubble { position: absolute; inset: 0; background: #FFFFFF; border: 5px solid #E0A526; border-radius: 34px;
+  display: flex; align-items: center; padding: 0 44px; font-weight: 800; font-size: 46px; line-height: 1.25; }
+.bubble.long { font-size: 38px; line-height: 1.25; }
+.bubble::after { content: ""; position: absolute; left: 90px; bottom: -44px; border: 22px solid transparent; border-top: 22px solid #E0A526; }
+.bubble .w { opacity: 0; }
+.code { position: absolute; inset: 0; background: #16224A; border-radius: 28px; padding: 30px 40px; font-family: "JetBrains Mono", monospace;
+  font-size: 30px; line-height: 1.45; color: #E6EEFF; white-space: pre; font-variant-ligatures: none; font-feature-settings: "calt" 0, "liga" 0; }
+.code .c { color: #7FF3E6; }
+.code .ln { display: block; clip-path: inset(0 100% 0 0); }
+.spark { position: absolute; width: 26px; height: 26px; background: #E0A526; border-radius: 4px; opacity: 0; }
+.tab { position: absolute; left: 310px; top: 118px; width: 1500px; height: 844px; z-index: 5; }
+.tab-in { position: absolute; inset: 0; background: #16224A; border-radius: 44px; }
+.screen { position: absolute; left: 20px; top: 11px; width: 1460px; height: 822px; border-radius: 26px; overflow: hidden; background: #F7FAFD; }
+.screen video, .screen img { position: absolute; left: 0; top: 0; width: 1460px; height: 822px; object-fit: cover; }
+.badge { position: absolute; right: -40px; top: -50px; width: 250px; height: 250px; border-radius: 50%; background: #E0A526; border: 10px solid #FFFFFF;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; color: #16224A; z-index: 3; }
+.badge b { font-weight: 900; font-size: 84px; line-height: 0.9; }
+.badge span { font-weight: 800; font-size: 30px; }
+.receipt { position: absolute; left: -50px; padding: 16px 30px; background: #FFFFFF; border: 6px solid #C6432A; border-radius: 18px;
+  color: #C6432A; font-weight: 900; font-size: 50px; z-index: 8; }
+.receipt small { display: block; font-weight: 800; font-size: 28px; color: #4E5B80; }
+</style>
+  <div id="root" data-composition-id="ch1" data-width="1920" data-height="1080">
+    <div id="c1-card" class="card clip" data-start="0" data-duration="19.6" data-track-index="2" ><div id="c1-card-in" class="card-in"><div class="card-ask">Which is bigger?</div><div class="num" style="left: 30px">0.45</div><div class="num" style="left: 390px">0.5</div><svg class="marks" viewBox="0 0 760 440"><path id="c1-ring" opacity="0" d="M200 150 C330 150 350 330 200 335 C70 338 50 160 190 148" fill="none" stroke="#2449A8" stroke-width="9" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/></svg><div id="c1-cross" class="cross" data-layout-allow-overlap>✗</div></div></div>
+    <div id="c1-bub" class="slot clip" data-start="10.801" data-duration="2.6" data-track-index="3" ><div id="c1-bub-in" class="bubble "><span>“<span class="w">Look </span><span class="w">at </span><span class="w">the </span><span class="w">tenths </span><span class="w">first. </span>”</span></div></div>
+    <div id="c1-sparks" class=" clip" data-start="13.201" data-duration="0.9" data-track-index="4" data-layout-ignore><div class="spark" style="left: 462px; top: 140px"></div><div class="spark" style="left: 512px; top: 120px"></div><div class="spark" style="left: 560px; top: 146px"></div></div>
+    <div id="c1-code" class="slot clip" data-start="13.301" data-duration="6.299" data-track-index="3" ><div id="c1-code-in" class="code" style="opacity: 0"><span class="ln c"># "look at the tenths first"</span><span class="ln">return bigger_tenths(a, b)</span></div></div>
+    <div id="c1-tab" class="tab"><div id="c1-tab-in" class="tab-in"><div class="screen"><video id="c1-v" class="clip" src="assets/proof/retry.mp4" muted playsinline data-start="19.35" data-duration="14.55" data-track-index="9"></video></div><div id="c1-badge" class="badge" style="opacity: 0"><b>24</b><span>out of 40</span></div></div></div>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      
+const show = (sel, on, t, d = 0.12) => tl.to(sel, { opacity: on ? 1 : 0, duration: d, ease: "none" }, t);
+const typeWords = (sel, t0, gap) => gsap.utils.toArray(sel).forEach((w, i) => tl.to(w, { opacity: 1, duration: 0.08, ease: "none" }, t0 + i * gap));
+const bubbleIn = (sel, t) => tl.fromTo(sel, { y: 300 }, { y: 0, duration: 0.6, ease: "expo.out" }, t);
+const bubbleInto = (sel, t) => tl.to(sel, { x: -880, y: -640, scale: 0.05, rotation: -20, backgroundColor: "#E0A526", duration: 0.55, ease: "power3.in" }, t);
+const sparks = (sel, t) => {
+  tl.fromTo(sel, { opacity: 1, scale: 0.2, x: 0, y: 0 }, { scale: 1, x: (i) => [-40, 0, 40][i], y: (i) => [-30, -50, -24][i], rotation: 45, duration: 0.35, ease: "expo.out", stagger: 0.03 }, t);
+  tl.to(sel, { opacity: 0, duration: 0.2, ease: "none" }, t + 0.3);
+};
+const codeIn = (sel, t) => {
+  tl.fromTo(sel, { opacity: 0, scale: 0.9, filter: "blur(8px)" }, { opacity: 1, scale: 1, filter: "blur(0px)", duration: 0.3, ease: "expo.out" }, t);
+  gsap.utils.toArray(sel + " .ln").forEach((ln, i) => tl.to(ln, { clipPath: "inset(0 0% 0 0)", duration: 0.32, ease: "none" }, t + 0.15 + i * 0.3));
+};
+const blurIn = (sel, t) => tl.fromTo(sel, { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.18, ease: "expo.out" }, t);
+const blurOut = (sel, t) => tl.to(sel, { opacity: 0, filter: "blur(8px)", duration: 0.18, ease: "power2.in" }, t);
+const stampIn = (sel, t, rot = -8) => tl.fromTo(sel, { opacity: 0, scale: 1.7, rotation: rot - 10 }, { opacity: 1, scale: 1, rotation: rot, duration: 0.2, ease: "power4.out" }, t);
+const pop = (sel, t) => tl.fromTo(sel, { opacity: 0, scale: 0.3 }, { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(1.8)" }, t);
+const TAB = { full: { x: 0, y: 0, scale: 1 }, col: { x: 700, y: 52, scale: 0.5067 }, offR: { x: 1700, y: 52, scale: 0.5067 }, box: { x: -230, y: 90, scale: 0.55 } };
+const tabSet = (sel, s, t) => tl.set(sel, { ...TAB[s], transformOrigin: "0 0" }, t);
+const tabTo = (sel, s, t, d, ease) => tl.to(sel, { ...TAB[s], transformOrigin: "0 0", duration: d, ease }, t);
+
+      tl.set("#c1-ring", { opacity: 1 }, 2.95); tl.to("#c1-ring", { strokeDashoffset: 0, duration: 0.85, ease: "power1.inOut" }, 2.95);
+      stampIn("#c1-cross", 5);
+      tl.fromTo("#c1-card-in", { x: 0 }, { keyframes: { x: [0, -10, 8, -4, 0] }, duration: 0.3, ease: "none" }, 5.2);
+      bubbleIn("#c1-bub-in", 10.901); typeWords("#c1-bub-in .w", 11.301, 0.21); bubbleInto("#c1-bub-in", 12.801);
+      sparks("#c1-sparks .spark", 13.351);
+      codeIn("#c1-code-in", 13.401);
+      blurOut("#c1-card-in", 19.3); blurOut("#c1-code-in", 19.3);
+      tabSet("#c1-tab", "offR", 0);
+      tabTo("#c1-tab", "col", 19.35, 0.5, "expo.out"); tabTo("#c1-tab", "full", 19.95, 0.55, "power2.inOut");
+      pop("#c1-badge", 27.51);
+      tabTo("#c1-tab", "col", 33, 0.45, "power2.inOut"); tabTo("#c1-tab", "offR", 33.45, 0.4, "power3.in");
+      window.__timelines["ch1"] = tl;
+    })();
+  </script>
+</template>

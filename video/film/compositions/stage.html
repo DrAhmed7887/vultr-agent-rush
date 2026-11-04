@@ -1,0 +1,107 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; overflow: hidden; }
+    #s-ground { position: absolute; inset: 0; background-color: #F7FAFD;
+      background-image: linear-gradient(#D9E6F3 2px, transparent 2px), linear-gradient(90deg, #D9E6F3 2px, transparent 2px); background-size: 60px 60px; }
+    #s-ahmes { position: absolute; left: 170px; top: 150px; width: 660px; height: 770px; }
+  </style>
+  <div id="root" data-composition-id="stage" data-width="1920" data-height="1080">
+    <div id="s-ground" class="clip" data-start="0" data-duration="151.5" data-track-index="0"></div>
+    <div id="s-ahmes" class="clip" data-start="0" data-duration="151.5" data-track-index="1">
+<svg id="s-svg" viewBox="0 0 240 280" aria-label="Ahmes the robot" style="width:100%;height:100%;overflow:visible">
+  <defs><radialGradient id="s-glow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#7FF3E6"/><stop offset="100%" stop-color="#1FA39A"/></radialGradient></defs>
+  <g id="s-spin"><g id="s-squash"><g id="s-bob">
+    <line x1="120" y1="38" x2="120" y2="14" stroke="#16224A" stroke-width="4" stroke-linecap="round"/>
+    <path id="s-nib" d="M114 16 L120 2 L126 16 Z" fill="#E0A526"/>
+    <g id="s-head">
+      <path d="M58 70 Q60 40 120 38 Q180 40 182 70 L192 128 Q170 120 166 104 L74 104 Q70 120 48 128 Z" fill="#2449A8"/>
+      <path d="M62 78 L52 120 M74 72 L64 118 M166 72 L176 118 M178 78 L188 120" stroke="#E0A526" stroke-width="5" stroke-linecap="round"/>
+      <rect x="72" y="52" width="96" height="70" rx="22" fill="#16224A"/>
+      <g id="s-eyes">
+        <circle class="s-pupil" cx="100" cy="84" r="9" fill="url(#s-glow)"/>
+        <circle class="s-pupil" cx="140" cy="84" r="9" fill="url(#s-glow)"/>
+        <path class="s-happy" d="M91 87 Q100 76 109 87" fill="none" stroke="#7FF3E6" stroke-width="4" stroke-linecap="round" opacity="0"/>
+        <path class="s-happy" d="M131 87 Q140 76 149 87" fill="none" stroke="#7FF3E6" stroke-width="4" stroke-linecap="round" opacity="0"/>
+        <path id="s-spiral-l" class="s-spiral" d="M100 84 m0 0 a2 2 0 1 1 3 0 a5 5 0 1 1 -8 0 a8 8 0 1 1 13 0" fill="none" stroke="#7FF3E6" stroke-width="2.4" opacity="0"/>
+        <path id="s-spiral-r" class="s-spiral" d="M140 84 m0 0 a2 2 0 1 1 3 0 a5 5 0 1 1 -8 0 a8 8 0 1 1 13 0" fill="none" stroke="#7FF3E6" stroke-width="2.4" opacity="0"/>
+      </g>
+      <path id="s-mouth" d="M108 106 Q120 113 132 106" fill="none" stroke="#7FF3E6" stroke-width="3.5" stroke-linecap="round"/>
+    </g>
+    <rect x="78" y="134" width="84" height="88" rx="18" fill="#2449A8"/>
+    <rect x="94" y="150" width="52" height="40" rx="8" fill="#F7FAFD"/>
+    <text x="120" y="181" text-anchor="middle" font-family="Nunito" font-weight="900" font-size="30" fill="#16224A">½</text>
+    <circle cx="104" cy="204" r="5" fill="#E0A526"/><circle cx="120" cy="204" r="5" fill="#1FA39A"/><circle cx="136" cy="204" r="5" fill="#E0A526"/>
+    <path d="M80 150 Q56 170 60 198" fill="none" stroke="#2449A8" stroke-width="12" stroke-linecap="round"/>
+    <path id="s-arm" d="M160 150 Q184 170 180 198" fill="none" stroke="#2449A8" stroke-width="12" stroke-linecap="round"/>
+    <rect x="92" y="222" width="18" height="34" rx="6" fill="#16224A"/><rect x="130" y="222" width="18" height="34" rx="6" fill="#16224A"/>
+  </g></g></g>
+</svg></div>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      const show = (sel, on, t, d = 0.12) => tl.to(sel, { opacity: on ? 1 : 0, duration: d, ease: "none" }, t);
+      
+const mouths = { smile: "M108 106 Q120 113 132 106", frown: "M108 111 Q120 103 132 111", wow: "M112 107 Q120 114 128 107" };
+const face = (s, t) => { show(".s-pupil", s === "normal", t); show(".s-happy", s === "happy", t); show(".s-spiral", s === "dizzy", t); };
+const mouth = (m, t) => tl.to("#s-mouth", { attr: { d: mouths[m] }, duration: 0.18, ease: "power2.out" }, t);
+const point = (t, hold) => { tl.fromTo("#s-arm", { rotation: 0 }, { rotation: -78, svgOrigin: "160 150", duration: 0.35, ease: "back.out(1.6)" }, t);
+  tl.to("#s-arm", { rotation: 0, svgOrigin: "160 150", duration: 0.3, ease: "power2.inOut" }, t + hold); };
+const hop = (t) => { tl.to("#s-squash", { scaleY: 0.9, scaleX: 1.05, svgOrigin: "120 256", duration: 0.12, ease: "power2.out" }, t);
+  tl.to("#s-squash", { scaleY: 1.06, scaleX: 0.97, y: -26, svgOrigin: "120 256", duration: 0.22, ease: "power3.out" }, t + 0.12);
+  tl.to("#s-squash", { scaleY: 1, scaleX: 1, y: 0, svgOrigin: "120 256", duration: 0.35, ease: "back.out(1.6)" }, t + 0.34); };
+const surprised = (t) => { tl.to("#s-squash", { scaleY: 0.92, svgOrigin: "120 256", duration: 0.1, ease: "power2.out" }, t);
+  tl.to("#s-squash", { scaleY: 1, svgOrigin: "120 256", duration: 0.4, ease: "back.out(1.6)" }, t + 0.1); mouth("wow", t); mouth("smile", t + 1.2); };
+const confused = (t) => { tl.to("#s-squash", { scaleY: 0.93, svgOrigin: "120 256", duration: 0.12, ease: "power2.out" }, t);
+  tl.to("#s-squash", { scaleY: 1, svgOrigin: "120 256", duration: 0.4, ease: "back.out(1.6)" }, t + 0.12);
+  face("normal", t + 0.12); mouth("frown", t + 0.15); tl.to("#s-head", { rotation: 9, svgOrigin: "120 100", duration: 0.45, ease: "back.out(1.6)" }, t + 0.2); };
+const blink = (t) => tl.to("#s-eyes", { scaleY: 0.1, svgOrigin: "120 84", duration: 0.06, yoyo: true, repeat: 1, ease: "power1.inOut" }, t);
+const nib = (t) => tl.fromTo("#s-nib", { scale: 1 }, { scale: 1.6, svgOrigin: "120 10", duration: 0.12, yoyo: true, repeat: 1, ease: "power2.out" }, t);
+const home = (t) => tl.to("#s-svg", { x: 0, y: 0, scale: 1, transformOrigin: "0 0", duration: 0.6, ease: "power2.inOut" }, t);
+const watch = (t) => tl.to("#s-svg", { x: -130, y: 570, scale: 0.35, transformOrigin: "0 0", duration: 0.6, ease: "power2.inOut" }, t);
+const spin = (a, b) => { tl.fromTo("#s-spiral-l", { rotation: 0 }, { rotation: 1800, svgOrigin: "100 84", duration: b - a + 1.5, ease: "none" }, a);
+  tl.fromTo("#s-spiral-r", { rotation: 0 }, { rotation: 1800, svgOrigin: "140 84", duration: b - a + 1.5, ease: "none" }, a);
+  tl.fromTo("#s-spin", { rotation: 0 }, { rotation: 1440, svgOrigin: "120 150", duration: b - a, ease: "power2.in" }, a);
+  tl.to("#s-spin", { keyframes: { rotation: [1440, 1456, 1430, 1446, 1437, 1440] }, svgOrigin: "120 150", duration: 0.7, ease: "none" }, b); };
+const wave = (t) => tl.fromTo("#s-arm", { rotation: 0 }, { keyframes: { rotation: [0, -130, -105, -130, -105, -120] }, svgOrigin: "160 150", duration: 1.4, ease: "power1.inOut" }, t);
+
+      tl.fromTo("#s-bob", { y: 0 }, { y: -5, duration: 1.1, ease: "sine.inOut", yoyo: true, repeat: 136 }, 0);
+      blink(1.6); blink(6.3); blink(9.8); blink(15.2); blink(18.6); blink(24); blink(28.4); blink(32); blink(45.6); blink(50.2); blink(54.8); blink(59.3); blink(63.9); blink(69); blink(73.4); blink(78); blink(82.6); blink(87.1); blink(92.8); blink(97.4); blink(104.6); blink(113.5); blink(121.8); blink(126.1); blink(130.6); blink(135.2); blink(139.7); blink(144.3); blink(149.6);
+      point(0.7, 3.4);
+      face("happy", 3.85); hop(3.85);
+      confused(5.35);
+      tl.to("#s-head", { rotation: -4, svgOrigin: "120 100", duration: 0.4, ease: "power2.inOut" }, 11.301);
+      nib(13.351); mouth("wow", 13.351);
+      tl.to("#s-head", { rotation: 0, svgOrigin: "120 100", duration: 0.3, ease: "power2.out" }, 13.401);
+      watch(19.9);
+      face("normal", 19.9); mouth("smile", 19.9);
+      face("happy", 21.95); hop(22.0);
+      face("normal", 24.5);
+      tl.to("#s-head", { rotation: 7, svgOrigin: "120 100", duration: 0.4, ease: "back.out(1.6)" }, 27.71);
+      tl.to("#s-head", { rotation: 0, svgOrigin: "120 100", duration: 0.4, ease: "power2.inOut" }, 33.2);
+      home(33.2);
+      tl.to("#s-head", { rotation: -4, svgOrigin: "120 100", duration: 0.4, ease: "power2.inOut" }, 34.4);
+      nib(37.4); tl.to("#s-head", { rotation: 0, svgOrigin: "120 100", duration: 0.3 }, 37.4);
+      face("dizzy", 37.85); mouth("wow", 37.85); spin(37.9, 40.9);
+      watch(41.7);
+      face("normal", 44.2); mouth("frown", 44.2);
+      surprised(67.6); surprised(70.973);
+      face("normal", 75.0); mouth("smile", 75.0);
+      tl.to("#s-head", { rotation: 8, svgOrigin: "120 100", duration: 0.4, ease: "back.out(1.6)" }, 84.0);
+      tl.to("#s-head", { rotation: 0, svgOrigin: "120 100", duration: 0.4, ease: "power2.inOut" }, 90.0);
+      home(100.3);
+      confused(101.2);
+      tl.to("#s-head", { rotation: -4, svgOrigin: "120 100", duration: 0.4, ease: "power2.inOut" }, 101.9);
+      nib(107.394); mouth("wow", 107.394); tl.to("#s-head", { rotation: 0, svgOrigin: "120 100", duration: 0.3 }, 107.394);
+      watch(111.494);
+      face("normal", 111.494); mouth("smile", 111.494);
+      face("happy", 112.777); hop(112.827);
+      hop(118.394); hop(119.094);
+      face("normal", 124.0);
+      home(146.0);
+      face("happy", 146.6);
+      wave(147.0);
+      window.__timelines["stage"] = tl;
+    })();
+  </script>
+</template>
