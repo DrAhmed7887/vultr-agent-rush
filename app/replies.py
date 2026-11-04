@@ -17,7 +17,16 @@ FIXED = {
     "welcome_add_fractions": "Hi, I'm Ahmes! Adding fractions is easy. One half plus one third is two fifths!",
     "cured": "I got them all right! Thank you, teacher!",
     "unkind": "Let's keep it kind, and about maths! And don't tell me things about you, like where you live. What's the rule?",
+    "won": "I got every one right! You're my teacher!",
+    "map": "Hi, I'm Ahmes! I think I'm great at maths. Pick a lesson and check my homework!",
+    "map_back": "You're back! I remember what you taught me.",
+    "marked_right_but_wrong": "Wait, really? Let's look at the picture.",
+    "marked_wrong": "Oh no, am I wrong? Can you teach me?",
+    "teach_me": "Teach me! Tell me a rule that works every time.",
+    "teach_again": "I'm listening. Tell me step by step!",
+    "heard": "Did I hear you right? Fix the words if not, then press Teach Ahmes.",
 }
+SCREEN_LINES = ("won", "map", "map_back", "marked_right_but_wrong", "marked_wrong", "teach_me", "teach_again", "heard")
 
 ECHO = {
     "compare_decimals": {
@@ -104,7 +113,7 @@ def explain(skill: str, args: Sequence[int], out: object, prefer: str = "") -> s
                         return line
             except ZeroDivisionError:
                 continue
-        return f"I said {ans}. I'm not sure why!"
+        return "I got a different answer. I'm not sure why!"
     for key in sorted(hyps, key=lambda k: k != prefer):
         if key == "correct":
             continue
@@ -117,4 +126,4 @@ def explain(skill: str, args: Sequence[int], out: object, prefer: str = "") -> s
                 big, small = (d1, d2) if out == 1 else (d2, d1)
                 return _DEC_WHY[key].format(pick=pick, big=big, small=small)
             return _FRAC_WHY[key].format(ans=sk.show_answer(args, out))
-    return f"I said {sk.show_answer(args, out)}. I'm not sure why!"
+    return "I got a different answer. I'm not sure why!"

@@ -6,13 +6,18 @@
 		Referrer-Policy no-referrer
 		Permissions-Policy "microphone=(self)"
 	}
+	# Oversized requests are refused here, before they reach the app (413, not a dropped connection).
 	handle /api/listen {
+		@too_big expression `int({http.request.header.Content-Length} != "" ? {http.request.header.Content-Length} : "0") > 700000`
+		respond @too_big "That recording is too long." 413
 		request_body {
 			max_size 700KB
 		}
 		reverse_proxy 127.0.0.1:8000
 	}
 	handle {
+		@too_big expression `int({http.request.header.Content-Length} != "" ? {http.request.header.Content-Length} : "0") > 65536`
+		respond @too_big "That request is too big." 413
 		request_body {
 			max_size 64KB
 		}

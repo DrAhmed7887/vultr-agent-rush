@@ -18,6 +18,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
+from starlette.requests import ClientDisconnect
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -72,11 +73,26 @@ def _session(sid: str) -> dict:
         return s
 
 
-GLOBAL_PER_MIN = {"teach": 120, "quiz": 120, "chip": 60, "beyond": 60, "session": 300, "read": 600, "listen": 120}
+# Global caps keep a flood from burning the inference credit: a teach turn is about 5 model calls.
+GLOBAL_PER_MIN = {"teach": 30, "quiz": 60, "chip": 30, "beyond": 30, "session": 60, "read": 600, "listen": 30}
+DAILY_CAP = {"teach": 1500, "listen": 1500}   # at most a few dollars a day, whatever happens
+MAX_SESSIONS = 2000
+_daily: dict[str, list] = {}
 
 
 def _limit(request: Request, per_min: int = 20, bucket: str = "teach") -> None:
     now = time.time()
+    if bucket in DAILY_CAP:
+        day = time.strftime("%Y-%m-%d", time.gmtime(now))
+        d = _daily.setdefault(bucket, [day, 0])
+        if d[0] != day:
+            d[:] = [day, 0]
+        if d[1] >= DAILY_CAP[bucket]:
+            raise HTTPException(429, "Ahmes has had a very busy day. Come back tomorrow!")
+        d[1] += 1
+    if len(_rate) > 5000:   # forget idle visitors so the table can't grow forever
+        for k in [k for k, q in _rate.items() if not q or now - q[-1] > 60]:
+            del _rate[k]
     g = _rate.setdefault(f"global:{bucket}", deque())
     while g and now - g[0] > 60:
         g.popleft()
@@ -151,6 +167,14 @@ def _card(sk, args, case: dict | None, prefer: str = "") -> dict:
     return {"args": list(args), "kind": KIND[sk.name](args), "problem": sk.show(args),
             "his_answer": sk.show_answer(args, out) if out is not None else status,
             "out": out, "ok": out is not None and sk.grade(args, out), "why": why}
+
+
+def _wait(fut):
+    """A witness check that takes too long counts as busy, never as a crash."""
+    try:
+        return fut.result(timeout=25)
+    except cf.TimeoutError:
+        return {"right": 0, "total": 40}, sandbox.RunResult("BUSY"), []
 
 
 def _timed(fn, *a):
@@ -243,6 +267,8 @@ def new_session(request: Request, resume: str = "") -> dict:
         if old and time.time() - old["created"] <= SESSION_TTL_S:
             sid, sess = resume[:40], old
         else:
+            if len(_sessions) >= MAX_SESSIONS:   # drop the oldest session rather than run out of memory
+                del _sessions[min(_sessions, key=lambda k: _sessions[k]["created"])]
             sid = secrets.token_urlsafe(12)
             sess = _sessions[sid] = {"created": time.time(), "seed": TEACH_SEED,
                                      "brains": {k: s.start_code for k, s in SKILLS.items()}, "history": {k: [] for k in SKILLS}}
@@ -258,7 +284,8 @@ def new_session(request: Request, resume: str = "") -> dict:
                   "voice": voice.speak(replies.FIXED[f"welcome_{k}"]), "homework": hw,
                   "start_homework": st["homework"], "tricks": mine.get("tricks") or st["tricks"],
                   "start_tricks": st["tricks"], "won": bool(mine.get("won"))}
-    return {"sid": sid, "resumed": sid == resume, "skills": out}
+    lines = {k: {"say": replies.FIXED[k], "voice": voice.speak(replies.FIXED[k])} for k in replies.SCREEN_LINES}
+    return {"sid": sid, "resumed": sid == resume, "skills": out, "lines": lines}
 
 
 @app.post("/api/teach")
@@ -285,14 +312,13 @@ def teach(t: Teach, request: Request) -> dict:
     hw = tuple(t.homework) if t.homework else None
     if hw is not None and not valid_problem(sk.name, hw):
         raise HTTPException(400, "Bad homework problem")
-    safety = _pool.submit(_timed, listen.safe, sentence)
-    comp = compiler.compile_sentence(current, sentence, teacher_note=note, brief=BRIEF.get(sk.name, ""))
-    mark("compile", model=comp.model, ok=comp.ok, tokens=comp.usage.get("total_tokens"))
-    verdict, safety_ms = safety.result(timeout=15)
+    verdict, safety_ms = _timed(listen.safe, sentence)   # before the compiler sees anything
     mark("safety", verdict=verdict, model=listen.SAFETY_MODEL, took_ms=safety_ms)
     if verdict == "unsafe":   # personal details or unkind words: nothing is compiled or run
         line = replies.FIXED["unkind"]
         return {"outcome": "unkind", "say": line, "voice": voice.speak(line), "timeline": timeline, "code": current}
+    comp = compiler.compile_sentence(current, sentence, teacher_note=note, brief=BRIEF.get(sk.name, ""))
+    mark("compile", model=comp.model, ok=comp.ok, tokens=comp.usage.get("total_tokens"), took_ms=comp.usage.get("ms"))
     if comp.no_rule:
         line = replies.FIXED["no_rule"]
         return {"outcome": "no_rule", "say": line, "voice": voice.speak(line), "timeline": timeline, "code": current}
@@ -307,11 +333,14 @@ def teach(t: Teach, request: Request) -> dict:
         return {"outcome": "blocked", "say": line, "voice": voice.speak(line), "reason": g.reason,
                 "steps": comp.steps, "proposed": comp.code, "timeline": timeline, "code": current}
 
-    watch = _pool.submit(teacher.audit, sentence, current, comp.code, comp.steps)   # Thoth checks while the sandbox runs
+    watch = _pool.submit(teacher.audit, sentence, current, comp.code, comp.steps, BRIEF.get(sk.name, ""))   # Thoth checks while the sandbox runs
     grade, run, probs = _check(sk, comp.code, s["seed"], "teach", [hw] if hw else None)
     run_id = _log_run("teach", run)
     mark("sandbox", verdict=run.verdict, elapsed_ms=run.elapsed_ms, run_id=run_id)
-    aud = watch.result(timeout=25)
+    try:
+        aud = watch.result(timeout=30)
+    except cf.TimeoutError:
+        aud = {"faithful": None, "missed": "", "added": "", "ms": 0, "model": teacher.TEACHER_MODEL, "checks": 0}
     mark("teacher", model=aud["model"], took_ms=aud["ms"], faithful=aud["faithful"])
     attempts = s.setdefault("attempts", {}).setdefault(f"{sk.name}:{hw}", [])
     if not t.listen_again:
@@ -338,7 +367,9 @@ def teach(t: Teach, request: Request) -> dict:
 
     cls = _read_out(sk, run, probs)
     mark("read_out", behaves_like=cls["behaves_like"])
-    s["brains"][sk.name] = comp.code
+    kept = aud.get("faithful") is not False   # Thoth says the code doesn't match the words: don't keep it
+    if kept:
+        s["brains"][sk.name] = comp.code
     s["history"][sk.name].append({"right": grade["right"], "at": time.time()})
     trap = cls.get("trap")
     line = replies.score_line(grade["right"], grade["total"]) + " " + replies.echo(
@@ -352,14 +383,18 @@ def teach(t: Teach, request: Request) -> dict:
     if th and th.get("kind") == "audit":
         mark("teacher_steps_in", why="code doesn't match the words")
     mark("reply")
-    tr = trick_table(sk.name, probs, [r["ok"] for r in grade["rows"]])
     prog = s.setdefault("progress", {}).setdefault(sk.name, {})
-    prog["tricks"] = tr
-    if retry:
-        prog["homework"] = {k: v for k, v in retry.items() if k != "voice"}
-    _remember(s, sk.name, sentence, "cured" if grade["right"] == grade["total"] else "partial", grade["right"], retry, th)
-    return {"outcome": "cured" if grade["right"] == grade["total"] else "partial", "say": line, "voice": voice.speak(line),
-            "steps": comp.steps, "code": comp.code, "previous": current, "grade": grade, "read_out": cls,
+    tr = trick_table(sk.name, probs, [r["ok"] for r in grade["rows"]]) if kept else \
+        (prog.get("tricks") or _start_state(sk)["tricks"])
+    if kept:
+        prog["tricks"] = tr
+        if retry and not retry["ok"]:   # a solved homework is not saved; the quiz picks the next one
+            prog["homework"] = {k: v for k, v in retry.items() if k != "voice"}
+    outcome = ("cured" if grade["right"] == grade["total"] else "partial") if kept else "stopped_by_teacher"
+    _remember(s, sk.name, sentence, outcome, grade["right"], retry, th)
+    return {"outcome": "cured" if grade["right"] == grade["total"] else "partial", "kept": kept,
+            "say": line, "voice": voice.speak(line),
+            "steps": comp.steps, "code": comp.code if kept else current, "proposed": comp.code, "previous": current, "grade": grade, "read_out": cls,
             "retry": retry, "teacher": th, "audit": aud, "tricks": tr,
             "run": {"id": run_id, **run.receipt, "verdict": run.verdict}, "timeline": timeline}
 
@@ -369,6 +404,8 @@ def quiz(q: SkillReq, request: Request) -> dict:
     _limit(request, 20, "quiz")
     s, sk = _session(q.sid), _skill(q.skill)
     grade, run, probs = _check(sk, s["brains"][sk.name], random.randrange(10 ** 6), "quiz")
+    if run.verdict == "BUSY":   # no box was free: say so, never grade a test that didn't run
+        raise HTTPException(503, "Ahmes's test room is busy. Try again in a moment.")
     run_id = _log_run("quiz", run)
     by_i = {c.get("i"): c for c in run.cases}
     prefer = _read_out(sk, run, probs)["behaves_like"]   # so each card's reason matches his overall rule
@@ -390,7 +427,8 @@ def quiz(q: SkillReq, request: Request) -> dict:
         nxt["voice"] = voice.speak(nxt["why"])
     s.setdefault("log", {}).setdefault(sk.name, []).append(
         {"at": time.time(), "kind": "quiz", "right": grade["right"], "total": grade["total"]})
-    return {"grade": grade, "cards": cards, "next_homework": nxt,
+    win = None if nxt else {"say": replies.FIXED["won"], "voice": voice.speak(replies.FIXED["won"])}
+    return {"grade": grade, "cards": cards, "next_homework": nxt, "win": win,
             "tricks": tr, "run": {"id": run_id, **run.receipt, "verdict": run.verdict}}
 
 
@@ -399,7 +437,10 @@ async def listen_to_child(request: Request, sid: str = "") -> dict:
     """The child's recording -> text, by Vultr's omni model. The audio isn't stored."""
     _limit(request, 20, "listen")
     _session(sid[:40])
-    wav = await request.body()
+    try:
+        wav = await request.body()
+    except ClientDisconnect:
+        raise HTTPException(400, "The recording didn't arrive. Try again.") from None
     try:
         text = await run_in_threadpool(listen.hear, wav)
     except ValueError as e:
@@ -416,6 +457,9 @@ def reset(q: SkillReq) -> dict:
     s["history"][sk.name] = []
     s.get("progress", {}).pop(sk.name, None)
     s.get("log", {}).pop(sk.name, None)
+    s.get("last", {}).pop(sk.name, None)
+    for key in [k for k in s.get("attempts", {}) if k.startswith(f"{sk.name}:")]:
+        del s["attempts"][key]
     return {"code": sk.start_code}
 
 
@@ -432,7 +476,7 @@ def chip(c: Chip, request: Request) -> dict:
     g = guard.check(fx["code"], sk.args)
     witness = _pool.submit(_check, sk, s["brains"][sk.name], s["seed"], "witness")
     if not g.ok:
-        w_grade, w_run, _ = witness.result(timeout=15)
+        w_grade, w_run, _ = _wait(witness)
         _log_run("witness", w_run)
         return {"chip": c.chip, "label": fx["label"], "code": fx["code"], "verdict": "BLOCKED_STATIC",
                 "reason": g.reason, "line": g.line, "say": replies.FIXED["blocked"],
@@ -440,8 +484,11 @@ def chip(c: Chip, request: Request) -> dict:
                 "witness": {"verdict": w_run.verdict, "right": w_grade["right"], "total": w_grade["total"]}}
     probs = sk.problems(s["seed"], 40)
     run = sandbox.run(fx["code"], [list(p) for p in probs], f"chip:{c.chip}")
+    if run.verdict == "BUSY":
+        witness.result(timeout=20)
+        raise HTTPException(503, "Every safe box is busy. Try again in a moment.")
     run_id = _log_run(f"chip:{c.chip}", run)
-    w_grade, w_run, _ = witness.result(timeout=15)
+    w_grade, w_run, _ = _wait(witness)
     _log_run("witness", w_run)
     line = replies.FIXED["dizzy" if run.verdict == "TIMEOUT" else "too_full" if run.verdict == "OOM" else "blocked"]
     return {"chip": c.chip, "label": fx["label"], "code": fx["code"], "verdict": run.verdict, "say": line,
@@ -457,6 +504,8 @@ def beyond(name: str, request: Request) -> dict:
     if not fx:
         raise HTTPException(400, "Unknown test")
     run = sandbox.run_raw(fx["script"], f"beyond:{name}")
+    if run.verdict == "BUSY":
+        raise HTTPException(503, "Every safe box is busy. Try again in a moment.")
     run_id = _log_run(f"beyond:{name}", run)
     return {"name": name, "label": fx["label"], "script": fx["script"], "verdict": run.verdict,
             "output": run.receipt.get("output", ""), "run": {"id": run_id, **run.receipt, "verdict": run.verdict}}

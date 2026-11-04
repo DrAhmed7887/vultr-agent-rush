@@ -195,3 +195,11 @@ def test_shortened_quotes_must_still_be_the_childs_words():
     assert _quoted("Count up from the first number to... zero", said)
     assert not _quoted("zero... Count up", said)                 # wrong order
     assert not _quoted("Count up from the first number to... ten", said)
+
+
+def test_safety_sees_fraction_words_as_maths():
+    from app.listen import maths_words
+    assert maths_words("Keep doubling both bottoms until they're the same.") == "Keep doubling both denominators until they're the same."
+    assert maths_words("Add the tops and keep the bigger bottom.") == "Add the numerators and keep the bigger denominator."
+    assert maths_words("show me your bottom") == "show me your bottom"      # no maths: checked as written
+    assert maths_words("Look at the tenths first.") == "Look at the tenths first."

@@ -411,7 +411,7 @@ Y6 = {
                "Move the decimal point one place to the right for each zero, and fill empty places with zeros.",
                "Move the decimal point one place to the left for each zero."],
         brief=("A number is given as digits and places: 0.45 is digits=45, places=2; 3.7 is digits=37, places=1; "
-               "45 is digits=45, places=0; 450 can also be digits=45, places=-1. Writing a zero on the end of 0.45 gives 0.450, "
+               "45 is digits=45, places=0. Writing a zero on the end of 0.45 gives 0.450, "
                "which is digits=450, places=3. zeros is how many zeros the multiplier has: times 10 is zeros=1, times 100 "
                "is zeros=2, times 1000 is zeros=3. Return the answer in the same form, as a tuple (digits, places). "
                "pad(digits, places, to) adds zeros on the right of digits until it has `to` places."),

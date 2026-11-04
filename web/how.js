@@ -142,6 +142,7 @@ function showTeachInHow(d, sentence, previous, heardMs) {
   $("status").textContent = run ? `Tested in container ${run.container_id} in ${run.elapsed_ms} ms, then destroyed.` :
     d.outcome === "blocked" ? `The code guard refused it: ${d.reason}.` :
     d.outcome === "unkind" ? "Nemotron safety stopped the sentence before the compiler saw it." :
+    d.kept === false ? "Thoth stepped in: the code didn't match the words, so Ahmes kept his old brain." :
     d.outcome === "rejected" ? `Nothing changed: ${d.reason || "the compiler's patch was rejected"}.` : "";
   refreshLog();
 }

@@ -19,6 +19,8 @@ function say(text, voice) {
   if (state.voice && voice && voice.id) { state.audio.src = `/audio/${voice.id}.mp3`; state.audio.play().catch(() => {}); }
 }
 window.kidReact = (cls, text, voice) => { setRobot(cls); say(text, voice); };
+// one of Ahmes's fixed screen lines, with its pre-recorded voice
+const line = (key) => { const l = (state.lines || {})[key]; if (l) say(l.say, l.voice); };
 
 function show(name) {
   SCREENS.forEach((s) => { $(`s-${s}`).hidden = s !== name; });
@@ -66,7 +68,7 @@ function markHomework(childSaysRight) {
     $("go-teach").textContent = "Teach him the rule";
     $("go-teach").dataset.next = "teach";
     setRobot("is-confused");
-    say(childSaysRight ? "Wait, really? Let's look at the picture." : "Oh no, am I wrong? Can you teach me?");
+    line(childSaysRight ? "marked_right_but_wrong" : "marked_wrong");
   }
   show("proof");
 }
@@ -79,7 +81,7 @@ function teachScreen(again) {
   $("starters").querySelectorAll(".starter").forEach((b) => b.addEventListener("click", () => {
     $("sentence").value = b.textContent; $("sentence").focus(); $("teach-err").hidden = true;
   }));
-  setRobot(); say(again ? "I'm listening. Tell me step by step!" : "Teach me! Tell me a rule that works every time.");
+  setRobot(); line(again ? "teach_again" : "teach_me");
   show("teach");
 }
 
@@ -134,9 +136,20 @@ function quoteLine(steps, sentence) {
 }
 
 function afterTeach(d, sentence) {
+  const r = d.retry;
+  sk().lastRetry = r;
+  if (d.kept === false) {   // Thoth said the code doesn't match the words, so Ahmes keeps his old brain
+    $("you-said").textContent = quoteLine(d.steps, sentence);
+    $("retry-problem").innerHTML = problemForView(sk().view, r.args, r.out, r.ok ? "ok" : "bad");
+    $("retry-title").textContent = "Thoth stopped this brain";
+    $("retry-text").textContent = "Ahmes's new code didn't match your words, so he kept his old brain. Ask him to listen again, or teach him another way.";
+    $("retry-next").textContent = "Teach him again"; $("retry-next").dataset.next = "teach";
+    $("retry-why").hidden = true;
+    setRobot("is-confused"); say(r.why, r.voice); show("retry");
+    return;
+  }
   sk().current = d.code;
   renderTricks(d.tricks);
-  const r = d.retry;
   $("you-said").textContent = quoteLine(d.steps, sentence);
   $("retry-problem").innerHTML = problemForView(sk().view, r.args, r.out, r.ok ? "ok" : "bad");
   $("retry-why").hidden = r.ok;
@@ -195,6 +208,7 @@ async function quiz() {
     setTimeout(() => quizResult(d), 400 + d.cards.length * 450);
   } catch (e) {
     $("quiz-text").textContent = e.message; setRobot(); state.busy = false;
+    $("quiz-next").textContent = "Try the quiz again"; $("quiz-next").dataset.retry = "1"; $("quiz-next").hidden = false;
   }
 }
 
@@ -206,7 +220,7 @@ function quizResult(d) {
     sk().won = true;
     $("win-title").textContent = `You taught Ahmes every trick in “${sk().title}”!`;
     $("win-sub").textContent = `He got all ${d.grade.total} brand-new problems right, checked in a safe box.`;
-    say("I got every one right! You're my teacher!");
+    if (d.win) say(d.win.say, d.win.voice);
     return show("win");
   }
   const n = d.next_homework;
@@ -255,7 +269,7 @@ async function micToggle() {
         if (!r.ok) throw new Error(d.detail || "Ahmes couldn't hear that.");
         if (!d.text) throw new Error("Ahmes didn't hear any words. Try again, a bit closer.");
         $("sentence").value = d.text; $("teach-err").hidden = true; state.heardMs = Math.round(performance.now() - t0);
-        say("Did I hear you right? Fix the words if not, then press Teach Ahmes.");
+        line("heard");
       } catch (e) { $("teach-err").textContent = e.message; $("teach-err").hidden = false; }
       micUI("idle");
     };
@@ -293,7 +307,7 @@ function renderMap(welcomeBack) {
   }).join("");
   $("lessons").querySelectorAll(".lesson").forEach((b) => b.addEventListener("click", () => setSkill(b.dataset.k)));
   $("lesson-name").textContent = "Lessons";
-  setRobot(); say(welcomeBack ? "You're back! I remember what you taught me." : "Hi, I'm Ahmes! I think I'm great at maths. Pick a lesson and check my homework!");
+  setRobot(); line(welcomeBack ? "map_back" : "map");
   show("map");
 }
 
@@ -327,7 +341,7 @@ function certificate() {
   c.toBlob((b) => { const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "teacher-of-ahmes.png"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); });
 }
 
-const OUTCOME = { cured: "cured him", partial: "helped", timeout: "made him dizzy", oom: "filled his head" };
+const OUTCOME = { cured: "cured him", partial: "helped", timeout: "made him dizzy", oom: "filled his head", stopped_by_teacher: "was stopped by Thoth (the code didn't match the words)" };
 async function showReport() {
   try {
     const r = await fetch(`/api/report?sid=${encodeURIComponent(state.sid)}`).then((x) => x.json());
@@ -354,13 +368,17 @@ async function start() {
   $("sentence").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); teach(false); } });
   $("retry-next").addEventListener("click", () => ($("retry-next").dataset.next === "quiz" ? quiz() : teachScreen(true)));
   $("retry-why").addEventListener("click", () => {
-    const hw = sk().homework; const r = { ...hw };
-    $("proof-visual").innerHTML = proofForView(sk().view, r.args, null).svg;
-    $("proof-title").textContent = "Here's the right answer"; $("proof-text").textContent = proofForView(sk().view, r.args, null).caption;
+    const r = sk().lastRetry || sk().homework;
+    const pf = proofForView(sk().view, r.args, r.out);
+    $("proof-visual").innerHTML = pf.svg + (pf.zoom ? `<p class="zoom">${esc(pf.zoom)}</p>` : "");
+    $("proof-title").textContent = "Here's why he's still wrong"; $("proof-text").textContent = pf.caption;
     $("go-teach").textContent = "Teach him again"; $("go-teach").dataset.next = "teach"; show("proof");
   });
   $("oops-again").addEventListener("click", () => teachScreen(true));
-  $("quiz-next").addEventListener("click", () => homework(sk().nextHomework));
+  $("quiz-next").addEventListener("click", () => {
+    if ($("quiz-next").dataset.retry) { delete $("quiz-next").dataset.retry; $("quiz-next").textContent = "Make it his homework"; return quiz(); }
+    homework(sk().nextHomework);
+  });
   $("win-next").addEventListener("click", () => renderMap(false));
   $("win-cert").addEventListener("click", certificate);
   $("report-btn").addEventListener("click", showReport);
@@ -380,7 +398,7 @@ async function start() {
   try { saved = localStorage.getItem("ahmes_sid") || ""; } catch { /* private mode: no saving */ }
   try {
     const d = await api(`/api/session${saved ? `?resume=${encodeURIComponent(saved)}` : ""}`);
-    state.sid = d.sid; state.skills = d.skills;
+    state.sid = d.sid; state.skills = d.skills; state.lines = d.lines;
     try { localStorage.setItem("ahmes_sid", d.sid); } catch { /* fine */ }
     renderMap(d.resumed);
     refreshLog();

@@ -16,7 +16,7 @@ EL_MODEL = os.environ.get("ELEVENLABS_MODEL", "eleven_flash_v2_5")
 VULTR_TTS_MODEL = os.environ.get("VULTR_TTS_MODEL", "auk-flash")
 # A cap on new (uncached) ElevenLabs characters per day, so a flood of unusual answers can't burn
 # the quota or fill the disk. Over the cap, new lines use Vultr's TTS; past both caps, no audio.
-DAILY_CHARS = int(os.environ.get("AHMES_TTS_DAILY_CHARS", "20000"))
+DAILY_CHARS = int(os.environ.get("AHMES_TTS_DAILY_CHARS", "6000"))   # new lines only; cached lines are free
 _spent = {"day": "", "elevenlabs": 0, "vultr": 0}
 _spent_lock = threading.Lock()
 

@@ -126,13 +126,15 @@ function tensText(d, p) {
   const s = String(d).padStart(p + 1, "0");
   return `${Number(s.slice(0, -p)).toLocaleString("en-GB")}.${s.slice(-p)}`;
 }
+// an answer from his code, only if it's a sensible (digits, places) pair
+const tensOk = (o) => Array.isArray(o) && o.length === 2 && Number.isInteger(o[0]) && Number.isInteger(o[1]) && o[0] >= 0 && o[0] < 1e15 && Math.abs(o[1]) <= 12;
 function tensTruth(d, p, z) { const q = p - z; return q >= 0 ? [d, q] : [d * 10 ** -q, 0]; }
 
 function placeChart(args, hisOut) {
   const [d, p, z] = args;
   const rows = [[tensText(d, p), "num", ""]];
   const t = tensTruth(d, p, z), right = tensText(...t);
-  if (Array.isArray(hisOut) && tensText(...hisOut) !== right) rows.push([tensText(...hisOut), "his", "Ahmes"]);
+  if (tensOk(hisOut) && tensText(...hisOut) !== right) rows.push([tensText(...hisOut), "his", "Ahmes"]);
   rows.push([right, "true", `× ${(10 ** z).toLocaleString("en-GB")}`]);
   const split = (txt) => { const [i, f = ""] = txt.replace(/,/g, "").split("."); return [i, f]; };
   const intW = Math.max(...rows.map((r) => split(r[0])[0].length)), fracW = Math.max(...rows.map((r) => split(r[0])[1].length));
@@ -214,7 +216,7 @@ const VIEWS = {
     proof: placeChart,
     problem: (a, o, ring) => {
       const [d, p, z] = a;
-      const ans = Array.isArray(o) ? tensText(o[0], o[1]) : "?";
+      const ans = tensOk(o) ? tensText(o[0], o[1]) : "?";
       return `<p class="q">Times it</p><p class="nums">${tensText(d, p)}<span class="or">×</span>${(10 ** z).toLocaleString("en-GB")}<span class="or">=</span><span class="num ${ring}">${ans}</span></p>`;
     },
   },

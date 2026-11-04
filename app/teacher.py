@@ -59,12 +59,13 @@ def _audit_once(user: str, sentence: str) -> dict | None:
     return {"faithful": bool(obj.get("faithful")) and not missed and not added, "missed": missed, "added": added, "ms": ms}
 
 
-def audit(sentence: str, old: str, new: str, steps: list | None = None) -> dict:
+def audit(sentence: str, old: str, new: str, steps: list | None = None, brief: str = "") -> dict:
     """{"faithful", "missed", "added", "ms", "model", "checks"}. Thoth checks twice, in parallel, and
     only says the code doesn't match when both checks agree, so one noisy answer can't make him
     step in. faithful=None if he couldn't check."""
     mapping = "\n".join(f"- \"{st.get('quote', '')}\" became: {st.get('code', '')}" for st in (steps or []))
-    user = f"OLD CODE:\n{old}\nCHILD SAID:\n{sentence}\nTHE COMPILER SAYS THESE WORDS BECAME THIS CODE:\n{mapping or '- (none)'}\nNEW CODE:\n{new}"
+    about = f"ABOUT THE INPUTS: {brief}\n" if brief else ""
+    user = f"{about}OLD CODE:\n{old}\nCHILD SAID:\n{sentence}\nTHE COMPILER SAYS THESE WORDS BECAME THIS CODE:\n{mapping or '- (none)'}\nNEW CODE:\n{new}"
     with cf.ThreadPoolExecutor(max_workers=2) as ex:
         results = [r for r in ex.map(lambda _: _audit_once(user, sentence), range(2)) if r]
     if not results:

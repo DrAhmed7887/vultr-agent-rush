@@ -117,7 +117,8 @@ def _key(n: ast.AST) -> str:
     """A pattern's text; a > b and b < a (and the mirrored pair a > b / b > a) count as one idea."""
     if isinstance(n, ast.Compare) and len(n.ops) == 1:
         l, r = ast.unparse(n.left), ast.unparse(n.comparators[0])
-        return " ? ".join(sorted([l, r]))
+        kind = "==" if isinstance(n.ops[0], (ast.Eq, ast.NotEq)) else "<>"
+        return f" {kind} ".join(sorted([l, r]))
     if isinstance(n, ast.BinOp) and isinstance(n.op, (ast.Add, ast.Mult)):
         l, r = ast.unparse(n.left), ast.unparse(n.right)
         return f"{type(n.op).__name__}(" + ",".join(sorted([l, r])) + ")"
@@ -130,18 +131,24 @@ def _is_code_check(n: ast.AST) -> bool:
             and (isinstance(n.left, ast.Constant) or isinstance(n.comparators[0], ast.Constant)))
 
 
-def _patterns_tree(tree: ast.AST) -> set[str]:
-    return {_key(n) for n in ast.walk(tree) if isinstance(n, (ast.BinOp, ast.Compare)) and not _is_code_check(n)}
+def _patterns_tree(tree: ast.AST, calls: bool = False) -> set[str]:
+    """Maths patterns: arithmetic and comparisons. With calls=True, helper calls such as
+    apply(op2, b, c) count too, so a patch can't smuggle in steps through a helper."""
+    out = {_key(n) for n in ast.walk(tree) if isinstance(n, (ast.BinOp, ast.Compare)) and not _is_code_check(n)}
+    if calls:
+        out |= {"call " + ast.unparse(n) for n in ast.walk(tree)
+                if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in ("apply", "pad", "digit", "gcd")}
+    return out
 
 
-def _patterns(code: str) -> set[str]:
+def _patterns(code: str, calls: bool = False) -> set[str]:
     try:
-        return _patterns_tree(ast.parse(code))
+        return _patterns_tree(ast.parse(code), calls)
     except SyntaxError:
         return set()
 
 
-def _step_patterns(step_code: str) -> set[str]:
+def _step_patterns(step_code: str, calls: bool = False) -> set[str]:
     """Patterns in one step's snippet. A snippet can be a bare header such as "while a != b:",
     so give any line ending in a colon an empty body before parsing."""
     lines = [l for l in step_code.splitlines() if l.strip()]
@@ -153,9 +160,9 @@ def _step_patterns(step_code: str) -> set[str]:
             out.append(line[: len(line) - len(line.lstrip())] + "    pass")
     body = "\n".join("    " + line for line in out) or "    pass"
     try:
-        return _patterns_tree(ast.parse(f"def _f():\n{body}\n"))
+        return _patterns_tree(ast.parse(f"def _f():\n{body}\n"), calls)
     except SyntaxError:
-        return set().union(*(_patterns(l.strip().rstrip(":")) for l in lines)) if lines else set()
+        return set().union(*(_patterns(l.strip().rstrip(":"), calls) for l in lines)) if lines else set()
 
 
 MAX_PATTERNS_PER_STEP = 3
@@ -203,10 +210,10 @@ def quote_check(sentence: str, current: str, steps: list, code: str) -> str:
         pats = _step_patterns(str(st.get("code", "")))
         if len(pats - _patterns(current)) > MAX_PATTERNS_PER_STEP:
             return f"one step does more maths than its words say: {st.get('quote')!r}"
-        declared |= pats
+        declared |= _step_patterns(str(st.get("code", "")), calls=True)
     if _busiest_expression(code) > MAX_OPS_PER_EXPRESSION:
         return "one line packs several maths steps together; each step must come from the child's own words"
-    sneaked = _patterns(code) - _patterns(current) - declared
+    sneaked = _patterns(code, calls=True) - _patterns(current, calls=True) - declared
     if sneaked:
         return "the new code has maths no step explains: " + ", ".join(sorted(sneaked))[:120]
     return ""
@@ -219,6 +226,7 @@ def _call(model: str, messages: list[dict], timeout: float) -> tuple[dict, dict,
                    headers={"Authorization": f"Bearer {_api_key()}"})
     r.raise_for_status()
     data = r.json()
+    data.setdefault("usage", {})["ms"] = int(r.elapsed.total_seconds() * 1000)
     text = data["choices"][0]["message"].get("content") or ""
     return json.loads(text[text.find("{"): text.rfind("}") + 1]), data.get("usage", {}), text
 

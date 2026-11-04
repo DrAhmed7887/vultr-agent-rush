@@ -34,7 +34,7 @@ DOCKER_FLAGS = (
     "--security-opt", "no-new-privileges", "--user", "65534:65534", "--ulimit", "nofile=64:64",
     "--label", "ahmes=sandbox", "-i",
 )
-_slots = threading.BoundedSemaphore(2)
+_slots = threading.BoundedSemaphore(4)   # 4 boxes x 0.5 CPU fits the VM's 2 CPUs
 
 
 @dataclass
@@ -68,7 +68,7 @@ def _limits(name: str) -> dict:
 
 
 def run(code: str, inputs: list, purpose: str = "teach") -> RunResult:
-    if not _slots.acquire(timeout=5):
+    if not _slots.acquire(timeout=8):
         return RunResult("BUSY")
     try:
         return _run(code, inputs, purpose)
@@ -78,7 +78,7 @@ def run(code: str, inputs: list, purpose: str = "teach") -> RunResult:
 
 def run_raw(script: str, purpose: str = "beyond-the-guard") -> RunResult:
     """Run a fixed test script straight in the same container flags, without the guard or runner."""
-    if not _slots.acquire(timeout=5):
+    if not _slots.acquire(timeout=8):
         return RunResult("BUSY")
     try:
         return _run(script, [], purpose, raw=True)
