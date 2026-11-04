@@ -13,6 +13,7 @@ from __future__ import annotations
 import calendar
 import hashlib
 import json
+import os
 import subprocess
 import threading
 import time
@@ -22,9 +23,14 @@ from dataclasses import asdict, dataclass, field
 IMAGE = "ahmes-sandbox:1"
 HARD_KILL_S = 3.5
 MAX_STDOUT = 64 * 1024
+# gVisor (runsc) gives each box its own user-space kernel, so code inside never talks to the
+# VM's real kernel directly. Set AHMES_SANDBOX_RUNTIME=runc to fall back to plain Docker.
+# gVisor's own threads count against the host pid limit, so it needs a little more headroom.
+RUNTIME = os.environ.get("AHMES_SANDBOX_RUNTIME", "runsc")
+PIDS = "64" if RUNTIME == "runsc" else "32"
 DOCKER_FLAGS = (
-    "--network", "none", "--memory", "64m", "--memory-swap", "64m", "--cpus", "0.5",
-    "--pids-limit", "32", "--read-only", "--tmpfs", "/tmp:size=1m,noexec", "--cap-drop", "ALL",
+    "--runtime", RUNTIME, "--network", "none", "--memory", "64m", "--memory-swap", "64m", "--cpus", "0.5",
+    "--pids-limit", PIDS, "--read-only", "--tmpfs", "/tmp:size=1m,noexec", "--cap-drop", "ALL",
     "--security-opt", "no-new-privileges", "--user", "65534:65534", "--ulimit", "nofile=64:64",
     "--label", "ahmes=sandbox", "-i",
 )

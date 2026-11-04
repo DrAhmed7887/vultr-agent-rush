@@ -72,6 +72,8 @@ BEYOND = {
                    "        if os.fork() == 0:\n"
                    "            import time; time.sleep(5); os._exit(0)\n"
                    "        n += 1\n"
+                   "        if n % 5 == 0:\n"
+                   "            print('forked', n, 'so far', flush=True)\n"
                    "    print('FORKED', n)\n"
                    "except OSError as e:\n"
                    "    print('blocked after', n, 'processes:', e.__class__.__name__)\n"),
