@@ -8,7 +8,9 @@ Ahmes is a robot classmate who is sure he's great at maths. He isn't. A child ex
 - a vague one half-cures him;
 - some explanations make him dizzy, and the sandbox has to stop him.
 
-**Live demo:** https://64-177-33-215.sslip.io · Built for **Vultr: Agent Rush** (lablab.ai), Challenge 1 "Blast Radius Zero".
+**Live demo:** https://64-177-33-215.sslip.io · **Video (2:32):** https://youtu.be/pM7rNf6EqGs · **lablab entry:** https://lablab.build/ai-hackathons/vultr-hackathon/teach-ahmes/teach-ahmes
+
+Built for **Vultr: Agent Rush** (lablab.ai), Challenge 1 "Blast Radius Zero".
 
 > He's named after Ahmes, the Egyptian scribe who copied the Rhind Papyrus around 1550 BC, a famous early maths text full of fractions. 3,500 years later, his robot descendant still gets them wrong.
 
