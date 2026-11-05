@@ -1,4 +1,6 @@
-# lablab.ai submission: Teach Ahmes (draft for Ahmed to review and paste)
+# lablab.ai submission: Teach Ahmes
+
+Submitted 5 Nov 2026: https://lablab.build/ai-hackathons/vultr-hackathon/teach-ahmes/teach-ahmes · Video: https://youtu.be/pM7rNf6EqGs (unlisted). The text below is the source; the long description on lablab is a shortened version (2,000-character limit).
 
 **Challenge:** 1, Blast Radius Zero
 **Project title:** Teach Ahmes
@@ -39,5 +41,5 @@ A second open model, Thoth the teacher (GLM-5.3 on Vultr), watches every lesson:
 **Before submitting (Ahmed):**
 1. Watch the video and check the slides.
 2. (Done 4 Nov: the repo is public, with `main` as the default branch.)
-3. Upload the video, then fill in the lablab form with the text above. Deadline: Sun 8 Nov, 22:00 UTC (23:00 CET).
+3. (Done 5 Nov: the video is on YouTube, unlisted, and the entry is submitted.)
 4. After judging: destroy the Vultr VM (a stopped VM is still billed) and delete the inference subscription.
